@@ -4,10 +4,6 @@ let aspect = 1.5;
 // good values for CRT PAL
 let SCREEN_W = 320;
 let SCREEN_H = 192;
-let POS_X = 0;
-let POS_Y = 0;
-
-let saturation = 1.0;
 
 function calculateGeometry() {
    calculateGeometry_apple1();
@@ -23,12 +19,9 @@ function calculateGeometry_apple1() {
 
 /**************************************************/
 
-let WW = SCREEN_W;
-let HH = SCREEN_H;
-
 let apple1_canvas = document.getElementById("canvas");
 let apple1_context = apple1_canvas.getContext('2d');
-let apple1_imagedata = apple1_context.createImageData(WW*2, HH*2);
+let apple1_imagedata = apple1_context.createImageData(SCREEN_W*2, SCREEN_H*2);
 let imagedata_data = new Uint32Array(apple1_imagedata.data.buffer);
 
 function apple1_screen_update(cursor_on) {
@@ -36,7 +29,7 @@ function apple1_screen_update(cursor_on) {
 
    let ptr0 = 0;
    let ptr1 = 0;
-   let ptr2 = WW*2;
+   let ptr2 = SCREEN_W*2;
 
    let old_char = display[cursor_y*40+cursor_x];
    if(cursor_on) display[cursor_y*40+cursor_x] = 0; // '@'
@@ -55,8 +48,8 @@ function apple1_screen_update(cursor_on) {
                ptr0++;
             }
          }
-         ptr1 += WW*2;
-         ptr2 += WW*2;   
+         ptr1 += SCREEN_W*2;
+         ptr2 += SCREEN_W*2;
       }
    }
 
@@ -64,7 +57,7 @@ function apple1_screen_update(cursor_on) {
    display[cursor_y*40+cursor_x] = old_char;
 
    // m6561_imagedata.data.set(imagedata_buf8);
-   apple1_context.putImageData(apple1_imagedata, POS_X, POS_Y);
+   apple1_context.putImageData(apple1_imagedata, 0, 0);
 
    frames++;
    if(end_of_frame_hook !== undefined) end_of_frame_hook();
