@@ -1,5 +1,5 @@
 
-let aspect = 1.5;
+let aspect_apple1 = 1.5;
 
 // good values for CRT PAL
 let SCREEN_W = 320;

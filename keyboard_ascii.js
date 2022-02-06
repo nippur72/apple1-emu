@@ -44,6 +44,12 @@ class Apple1Keyboard {
          return;
       }
 
+      if(e.code == "PageUp" || e.code == "PageDown") {
+         flip();
+         e.preventDefault();
+         return;
+      }
+
       /*
       // ALT+Left is rewind tape
       if(e.code == "ArrowLeft" && e.altKey) {

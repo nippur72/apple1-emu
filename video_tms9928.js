@@ -1,3 +1,5 @@
+let aspect_tms9928 = 1.25;
+
 let tms9928_SCREEN_W = 342;
 let tms9928_SCREEN_H = 262;
 let tms9928_CANVAS_W = 342;
@@ -12,8 +14,8 @@ let tms9928_imagedata_data = new Uint32Array(tms9928_imagedata.data.buffer);
 function calculateGeometry_tms9928() {
    // canvas is the outer canvas where the aspect ratio is corrected
    let tms9928_canvas = document.getElementById("canvas_tms9928");
-   tms9928_canvas.width  = tms9928_CANVAS_W * 2;
-   tms9928_canvas.height = tms9928_CANVAS_H * 2;
+   tms9928_canvas.width  = (256+16)*2; //tms9928_CANVAS_W * 2;
+   tms9928_canvas.height = (192+16)*2; //tms9928_CANVAS_H * 2;
 
    // disable TMS9928 screen
    let screen = document.getElementById("screen_tms9928");
@@ -44,8 +46,8 @@ function tms9928_screen_update(ptr) {
       ptr2 += tms9928_SCREEN_W*2;
    }
 
-   tms9928_context.putImageData(tms9928_imagedata, 0, 0);
+   tms9928_context.putImageData(tms9928_imagedata, -60, -64);
 
-   tms_counter++;
-   if(tms_counter % 64 == 0) console.log("tms");
+   //tms_counter++;
+   //if(tms_counter % 64 == 0) console.log("tms");
 }

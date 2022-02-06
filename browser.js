@@ -1,11 +1,11 @@
 // handles interaction between browser and emulation 
 
 function onResize(e) {
-   resizeCanvas(document.getElementById("canvas_apple1"));
-   resizeCanvas(document.getElementById("canvas_tms9928"));
+   resizeCanvas(document.getElementById("canvas_apple1"),  aspect_apple1);
+   resizeCanvas(document.getElementById("canvas_tms9928"), aspect_tms9928);
 }
 
-function resizeCanvas(canvas) {
+function resizeCanvas(canvas, aspect) {
    if(window.innerWidth > (window.innerHeight*aspect))
    {
       canvas.style.width  = `${aspect*100}vmin`;
@@ -29,9 +29,6 @@ function goFullScreen()
    else if(canvas.mozRequestFullScreen !== undefined) canvas.mozRequestFullScreen();      
    onResize();
 }
-
-window.addEventListener("resize", onResize);
-window.addEventListener("dblclick", goFullScreen);
 
 // **** save state on close ****
 

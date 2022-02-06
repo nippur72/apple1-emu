@@ -50,13 +50,15 @@ function main() {
       autoload.forEach((e,i)=>rom_load(i,e));
    }
 
+   window.addEventListener("resize", onResize);
+   window.addEventListener("dblclick", goFullScreen);
+
    onResize();
    calculateGeometry();
 
    // starts drawing frames
    oneFrame();
 }
-
 
 function flip() {
    visible_screen = (visible_screen == "apple1") ? "tms9928" : "apple1";
