@@ -12,14 +12,10 @@ let mem_read, mem_write;
 let stopped = false; // allows to stop/resume the emulation
 let frames = 0;
 let averageFrameTime = 0;
-let cycle = 0;
-let total_cycles = 0;
-let throttle = false;
 let end_of_frame_hook = undefined;
 
 let options = {
-   load: undefined,
-   restore: false
+   load: undefined
 };
 
 let apple1keyboard = new Apple1Keyboard();
