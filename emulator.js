@@ -1,5 +1,11 @@
 "use strict";
 
+// TODO isolate TMS9918 from video.js
+// TODO ACI emulation
+// TODO experimental SID
+// TODO experimental TMS9918
+// TODO experimental VIA + SD card
+
 // global helper functions
 let mem_read, mem_write;
 
@@ -19,7 +25,6 @@ let options = {
 let apple1keyboard = new Apple1Keyboard();
 
 let last_timestamp = 0;
-
 function oneFrame(timestamp) {
    let stamp = timestamp == undefined ? last_timestamp : timestamp;
    let usec = (stamp - last_timestamp)*1000;
