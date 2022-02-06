@@ -51,6 +51,8 @@ function main() {
       autoload.forEach((e,i)=>rom_load(i,e));
    }
 
+   calculateGeometry();
+
    // starts drawing frames
    oneFrame();
 }
