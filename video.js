@@ -12,14 +12,14 @@ function calculateGeometry() {
 
 function calculateGeometry_apple1() {
    // canvas is the outer canvas where the aspect ratio is corrected
-   let canvas = document.getElementById("canvas");
+   let canvas = document.getElementById("canvas_apple1");
    canvas.width  = SCREEN_W * 2;
    canvas.height = SCREEN_H * 2;
 }
 
 /**************************************************/
 
-let apple1_canvas = document.getElementById("canvas");
+let apple1_canvas = document.getElementById("canvas_apple1");
 let apple1_context = apple1_canvas.getContext('2d');
 let apple1_imagedata = apple1_context.createImageData(SCREEN_W*2, SCREEN_H*2);
 let imagedata_data = new Uint32Array(apple1_imagedata.data.buffer);

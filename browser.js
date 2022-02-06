@@ -1,8 +1,14 @@
 // handles interaction between browser and emulation 
 
 function onResize(e) {
-   const canvas = document.getElementById("canvas");   
+   resizeCanvas(document.getElementById("canvas_apple1"));
 
+   if(tms9928_emulation) {
+      resizeCanvas(document.getElementById("canvas_tms9928"));
+   }
+}
+
+function resizeCanvas(canvas) {
    if(window.innerWidth > (window.innerHeight*aspect))
    {
       canvas.style.width  = `${aspect*100}vmin`;
@@ -56,7 +62,7 @@ window.addEventListener("visibilitychange", function() {
 
 // **** drag & drop ****
 
-const dropZone = document.getElementById('screen');
+const dropZone = document.getElementById('screen_apple1');
 
 // Optional.   Show the copy icon when dragging over.  Seems to only work for chrome.
 dropZone.addEventListener('dragover', function(e) {
