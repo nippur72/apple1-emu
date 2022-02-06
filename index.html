@@ -1,0 +1,53 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />					
+   </head>
+   
+
+<body style="padding:0; margin:0; background: black; color: green;">
+
+   <div style="margin: auto;" id="screen">
+      <canvas id="canvas" style="display: block; border:black 0px solid; padding: 0px; margin:auto;"></canvas>
+   </div>
+
+   <div style="margin: auto" id="screen_tms9928">
+      <canvas id="canvas_tms9928" style="display: block; border:rgb(98, 98, 98) 3px solid; padding: 0px; margin:auto; ">aaa</canvas>
+   </div>
+
+   <!-- allows to "Save As..." programs from the emulator -->
+   <script type="text/javascript" src="FileSaver.js"></script>
+
+   <!-- allows to used a keyval store with IndexedDB -->
+   <script type="text/javascript" src="idb-keyval-iife.min.js"></script>
+
+   <!-- core emulator files -->
+   <script type="text/javascript" src="autoload.js"></script>
+   <script type="text/javascript" src="bus.js"></script>
+   <script type="text/javascript" src="keyboard_ascii.js"></script>
+   <script type="text/javascript" src="signetics-charset.js"></script>
+   <script type="text/javascript" src="video.js"></script>
+   <script type="text/javascript" src="utils.js"></script>
+   <script type="text/javascript" src="printer.js"></script>
+   <script type="text/javascript" src="filesystem.js"></script>
+   <script type="text/javascript" src="mdawson.js"></script>
+   <script type="text/javascript" src="wav-decoder.js"></script>
+   <script type="text/javascript" src="wav-encoder.js"></script>
+   <script type="text/javascript" src="browser.js"></script>
+   <script type="text/javascript" src="audio.js"></script>
+   <script type="text/javascript" src="emulator.js"></script>
+
+   <!-- wasm body and wrapper-->
+   <script type="text/javascript" src="emscripten_module.wasm.array.js"></script>
+   <script type="text/javascript" src="emscripten_module.js"></script>
+   <script type="text/javascript" src="emscripten_wrapper.js"></script>
+
+</body>
+</html>
+
+<script>
+   (async function() {
+      await load_wasm();
+      main();
+   })();
+</script>
