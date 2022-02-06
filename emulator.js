@@ -1,6 +1,5 @@
 "use strict";
 
-// TODO isolate TMS9918 from video.js
 // TODO ACI emulation
 // TODO experimental SID
 // TODO experimental TMS9918
