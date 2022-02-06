@@ -2,7 +2,7 @@
 
 // TODO ACI emulation
 // TODO experimental SID
-// TODO experimental TMS9918
+// TODO experimental TMS9928
 // TODO experimental VIA + SD card
 
 // global helper functions
@@ -16,6 +16,8 @@ let options = {
 };
 
 let apple1keyboard = new Apple1Keyboard();
+
+let visible_screen = "apple1";
 
 let last_timestamp = 0;
 function oneFrame(timestamp) {
@@ -48,8 +50,15 @@ function main() {
       autoload.forEach((e,i)=>rom_load(i,e));
    }
 
+   onResize();
    calculateGeometry();
 
    // starts drawing frames
    oneFrame();
+}
+
+
+function flip() {
+   visible_screen = (visible_screen == "apple1") ? "tms9928" : "apple1";
+   calculateGeometry();
 }
