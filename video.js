@@ -58,7 +58,4 @@ function apple1_screen_update(cursor_on) {
 
    // m6561_imagedata.data.set(imagedata_buf8);
    apple1_context.putImageData(apple1_imagedata, 0, 0);
-
-   frames++;
-   if(end_of_frame_hook !== undefined) end_of_frame_hook();
 }

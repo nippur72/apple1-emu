@@ -55,9 +55,6 @@ function tms9928_screen_update(ptr) {
    tms9928_imagedata.data.set(tms9928_imagedata_buf8);
    tms9928_context.putImageData(tms9928_imagedata, 0, 0);
 
-   frames++;
-   if(end_of_frame_hook !== undefined) end_of_frame_hook();
-
    tms_counter++;
    if(tms_counter % 64 == 0) console.log("tms");
 }

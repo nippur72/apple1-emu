@@ -10,9 +10,7 @@
 let mem_read, mem_write;
 
 let stopped = false; // allows to stop/resume the emulation
-let frames = 0;
 let averageFrameTime = 0;
-let end_of_frame_hook = undefined;
 
 let options = {
    load: undefined
