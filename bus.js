@@ -18,17 +18,6 @@ function apple1_read_keyboard_port(address) {
    }
 }
 
-function apple1_read_display_port(address) {
-   if(address == 0xd012) {
-      // D012 DSP DATA
-      return 0x00; // terminal always ready
-   }
-   else if(address == 0xd013) {
-      // D013 DSP CR
-      return 0x00; // terminal always ready
-   }
-}
-
 // called directly from apple1.h/_apple1_tick()
 //
 function apple1_write_display_port(address, data) {
