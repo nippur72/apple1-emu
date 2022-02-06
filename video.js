@@ -21,22 +21,6 @@ function calculateGeometry_apple1() {
    canvas.height = SCREEN_H * 2;
 }
 
-function calculateGeometry_tms9918() {
-   // canvas is the outer canvas where the aspect ratio is corrected
-   let tms9928_canvas = document.getElementById("canvas_tms9928");
-   tms9928_canvas.width  = tms9928_SCREEN_W * 2;
-   tms9928_canvas.height = tms9928_SCREEN_H * 2;
-
-   // screen is the inner canvas that contains the emulated PAL screen
-   let tms9928_screenCanvas = document.createElement("canvas_tms9928");
-   tms9928_screenCanvas.width  = tms9928_SCREEN_W * 2;
-   tms9928_screenCanvas.height = tms9928_SCREEN_H * 2;
-
-   // disable TMS9928 screen
-   let screen_tms9928 = document.getElementById("screen_tms9928");
-   screen_tms9928.style.display = tms9928_emulation ? "block" : "none";
-}
-
 /**************************************************/
 
 let WW = SCREEN_W;
