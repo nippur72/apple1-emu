@@ -9,7 +9,7 @@
 
 #include "../roms/wozmon.h"
 
-#ifdef TMS9918
+#ifdef TMS9928
 #include "../tms9928.h"
 extern tms9928_t vdp;
 #endif
@@ -140,8 +140,9 @@ void apple1_reset(apple1_t* sys) {
    CHIPS_ASSERT(sys && sys->valid);
    sys->pins |= M6502_RES;
    sys->ticks = 0;
-   // TODO reset TMS9918 as well
-   #ifdef TMS9918
+   // TODO reset TMS9928 as well
+   #ifdef TMS9928
+   tms9928_reset(&vdp);
    #endif
 }
 
@@ -161,6 +162,16 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
          sys->display_ready = true;
       }
    }
+   //**********************************************************************************
+
+   //**********************************************************************************
+   // ticks the TMS9928
+   #ifdef TMS9928
+      // one NTSC scan line in 65 CPU clock ticks
+      if(sys->ticks % 65 == 0) {
+         tms9928_drawline(&vdp);
+      }
+   #endif
    //**********************************************************************************
 
    sys->ticks++;
@@ -201,9 +212,9 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
          }
       }
    }
-   #ifdef TMS9918
-   // tick the TMS9928 on $A000 - $A001
-   else if((addr & 0xFFFE) == 0xA000) {
+   #ifdef TMS9928
+   // TMS9928 access on $A000 - $A001
+   else if(addr >= 0xCC00 && addr <= 0xCC01) {
       // byte unused = (byte) EM_ASM_INT({ console.log('tms access'); }, 0 );
       int MODE = pins & 1;
       int read = pins & M6502_RW;  // CSR
@@ -251,15 +262,6 @@ void apple1_exec(apple1_t* sys, uint32_t micro_seconds) {
       pins = _apple1_tick(sys, pins);
    }
    sys->pins = pins;
-
-   #ifdef TMS9918
-      // TMS9928
-      if(micro_seconds > 10000) {
-         for(int t=0;t<262;t++) {
-            tms9928_drawline(&vdp);
-         }
-      }
-   #endif
 }
 
 void mem_write_word(apple1_t* sys, uint16_t address, uint16_t value) {

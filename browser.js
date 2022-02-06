@@ -2,10 +2,7 @@
 
 function onResize(e) {
    resizeCanvas(document.getElementById("canvas_apple1"));
-
-   if(tms9928_emulation) {
-      resizeCanvas(document.getElementById("canvas_tms9928"));
-   }
+   resizeCanvas(document.getElementById("canvas_tms9928"));
 }
 
 function resizeCanvas(canvas) {
@@ -35,8 +32,6 @@ function goFullScreen()
 
 window.addEventListener("resize", onResize);
 window.addEventListener("dblclick", goFullScreen);
-
-onResize();
 
 // **** save state on close ****
 

@@ -10,6 +10,8 @@ typedef uint16_t word;
 
 #define CHIPS_IMPL
 
+#define TMS9928 1
+
 #include "chips/m6502.h"
 #include "chips/mem.h"
 #include "chips/clk.h"
@@ -17,7 +19,7 @@ typedef uint16_t word;
 
 #include "roms/apple1-roms.h"
 
-#ifdef TMS9918
+#ifdef TMS9928
 #include "vdp.c"
 #endif
 
@@ -62,7 +64,7 @@ void sys_init() {
 
    apple1_init(&sys, &desc);
 
-#ifdef TMS9918
+#ifdef TMS9928
    vdp_init();
 #endif
 }

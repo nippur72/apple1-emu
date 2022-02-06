@@ -7,7 +7,7 @@ let SCREEN_H = 192;
 
 function calculateGeometry() {
    calculateGeometry_apple1();
-   calculateGeometry_tms9918();
+   calculateGeometry_tms9928();
 }
 
 function calculateGeometry_apple1() {
@@ -15,6 +15,9 @@ function calculateGeometry_apple1() {
    let canvas = document.getElementById("canvas_apple1");
    canvas.width  = SCREEN_W * 2;
    canvas.height = SCREEN_H * 2;
+
+   let screen = document.getElementById("screen_apple1");
+   screen.style.display = visible_screen == "apple1" ? "block" : "none";
 }
 
 /**************************************************/
