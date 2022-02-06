@@ -193,11 +193,11 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
          M6502_SET_DATA(pins, data);
       }
       else {
-         if(sys->display_ready) {
+         if(addr == 0xd012 && sys->display_ready) {
             byte data = M6502_GET_DATA(pins);
-            byte unused = (byte) EM_ASM_INT({ apple1_write_display_port($0,$1) }, addr, data);
+            byte unused = (byte) EM_ASM_INT({ display_receivechar($0) }, data);
             sys->display_ready = false;
-            sys->blink_counter = 400000;
+            sys->blink_counter = 400000;   // reset cursor blinking some steps before "on" state
          }
       }
    }

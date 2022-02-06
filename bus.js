@@ -18,16 +18,6 @@ function apple1_read_keyboard_port(address) {
    }
 }
 
-// called directly from apple1.h/_apple1_tick()
-//
-function apple1_write_display_port(address, data) {
-   //console.log(`write address ${hex(address,4)} with data ${hex(data,2)}`);
-   if(address == 0xd012) {
-      // D012 DSP DATA
-      display_receivechar(data);
-   }
-}
-
 let display = new Uint8Array(40*24).fill(32);
 
 let cursor_x = 0;
