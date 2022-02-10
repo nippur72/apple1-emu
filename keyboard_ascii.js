@@ -33,6 +33,10 @@ class Apple1Keyboard {
       // TODO: do not erase ram
 
       if(e.code == "Pause") {
+         if(e.altKey && e.ctrlKey) {
+            apple1.init();
+            display_receivechar(-1); // force CLS
+         }
          apple1.reset();
          e.preventDefault();
          return;

@@ -19,6 +19,7 @@ function load_wasm() {
          apple1.peek     = instance.cwrap("sys_mem_cpu_rd", 'number', ['number'] );
          apple1.poke     = instance.cwrap("sys_mem_cpu_wr", null, ['number', 'number'] );
          apple1.ticks    = instance.cwrap("sys_ticks", 'number');
+         apple1.nano_next_byte_to_send = instance.cwrap("sys_nano_next_byte_to_send", null, ['number'] );
 
          // export instance globally (not strictly required)
          wasm_instance = instance;

@@ -85,10 +85,19 @@ async function droppedFile(outName, bytes) {
       await crun(outName);
    }
 
-   const tap = /\.tap$/i;
-   if(tap.test(outName)) {
+   const woz = /\.woz$/i;
+   if(woz.test(outName)) {
+      let text = [];
+      bytes = bytes.map(e=>e==10?13:e); // \n => \r
+      bytes.forEach(e=>text.push(String.fromCharCode(Number(e))));  
+      text = text.join("");
+      paste(text);
+   }
+
+   const bin = /\.bin$/i;
+   if(bin.test(outName)) {
       await writeFile(outName, bytes);
-      await crun(outName);
+      console.log(`uploaded ${outName}`);
    }
 }
 
@@ -137,6 +146,24 @@ async function parseQueryStringCommands() {
          // internal load
          await fetchProgram(name);
       }   
+   }
+}
+
+async function fetchBytes(name) {
+   try
+   {
+      const response = await fetch(`software/${name}`);
+      if(response.status === 404) {
+         console.log(`file "${name}" not found`);
+         return new Uint8Array();
+      }
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      return bytes;
+   }
+   catch(err)
+   {
+      console.log(err);
+      return new Uint8Array();      
    }
 }
 

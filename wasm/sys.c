@@ -103,3 +103,8 @@ EMSCRIPTEN_KEEPALIVE
 int sys_ticks() {
    return sys.ticks;
 }
+
+EMSCRIPTEN_KEEPALIVE
+void sys_nano_next_byte_to_send(uint8_t data) {
+   sys.nano.data = data;
+}

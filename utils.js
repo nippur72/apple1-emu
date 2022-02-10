@@ -68,6 +68,7 @@ async function crun(filename) {
    await load(filename);
 }
 
+/*
 function pasteLine(text) {
    const lines = text.split("\n");
    for(let t=0; t<lines.length; t++) {
@@ -88,11 +89,35 @@ function paste(line) {
 }
 
 function pasteChar(c) {
-   while(apple1.peek(198) !== 0) {
-      apple1.exec_us(20000);
+
+   
+
+   keyboard_presskey(keyascii) {
+      this.key_pressed_ascii = keyascii;    
+      // console.log("pressed",keyascii);
    }
-   apple1.poke(631,c);
-   apple1.poke(198,1);
+
+   // called from cpu I/O
+   keyboard_read() {
+
+}
+*/
+
+function paste(s) { 
+   function paste_char() {
+      if(data.length == 0 || counter > 10) return;
+      if(apple1keyboard.key_pressed_ascii == -1) {
+         let k = data.shift();
+         apple1keyboard.keyboard_presskey(k);         
+         counter = 0;
+      }
+      setTimeout(paste_char, 16);
+   }
+
+   let counter = 0;  
+
+   let data = s.split("").map(c=>c.charCodeAt(0));
+   paste_char();
 }
 
 function wait(time) {

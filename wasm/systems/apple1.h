@@ -9,10 +9,14 @@
 
 #include "../roms/wozmon.h"
 
+#include "../chips/m6522.h"
+
 #ifdef TMS9928
 #include "../tms9928.h"
 extern tms9928_t vdp;
 #endif
+
+#include "../nano.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,6 +72,10 @@ typedef struct {
    uint32_t ticks;             // CPU tick counter
    int blink_counter;          // hardware cursor blink counter
    bool display_ready;         // display ready bit
+
+   m6522_t via;                // 6522 VIA chip for SD card interface emulation
+
+   nano_t nano;
 
 } apple1_t;
 
@@ -127,8 +135,19 @@ void apple1_init(apple1_t* sys, const apple1_desc_t* desc) {
    memcpy(&sys->woz_rom[1024-sizeof(woz_mon)], woz_mon, sizeof(woz_mon));
 
    mem_init(&sys->mem_cpu);
-   mem_map_ram(&sys->mem_cpu, 0, 0x0000, 65536-1024, sys->ram);
-   mem_map_rom(&sys->mem_cpu, 0, 0xFC00,       1024, sys->woz_rom);
+
+   mem_map_ram(&sys->mem_cpu, 0, 0x0000, 0x8000-0x0000, &sys->ram[0x0000]);  // 0000-7FFF RAM
+   mem_map_rom(&sys->mem_cpu, 0, 0x8000, 0xE000-0x8000, &sys->ram[0x8000]);  // 8000-DFFF ROM
+   mem_map_ram(&sys->mem_cpu, 0, 0xE000, 0xFC00-0xE000, &sys->ram[0xE000]);  // E000-FBFF RAM
+   mem_map_rom(&sys->mem_cpu, 0, 0xFC00,          1024, sys->woz_rom);       // FC00-FFFF ROM woz
+
+   // initialize ram
+   for(int t=0;t<=0xFFFF;t++) {
+      sys->ram[t] = ((t%4) == 0 || (t%4) == 1) ? 0x00 : 0xFF;
+   }
+
+   // initialize the VIA
+   m6522_init(&sys->via);
 }
 
 void apple1_discard(apple1_t* sys) {
@@ -144,7 +163,11 @@ void apple1_reset(apple1_t* sys) {
    #ifdef TMS9928
    tms9928_reset(&vdp);
    #endif
+   m6522_reset(&sys->via);
 }
+
+byte last_cpu_strobe = 255;
+byte last_mcu_strobe = 255;
 
 static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
 
@@ -186,6 +209,9 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
 
    // the IRQ and NMI pins will be set by the peripheral devices
    pins &= ~(M6502_IRQ|M6502_NMI);
+
+   // VIA address decoding and memory access (copies addr and data)
+   uint64_t via_pins = pins & M6502_PIN_MASK;
 
    const uint16_t addr = M6502_GET_ADDR(pins);
    const int read = pins & M6502_RW;
@@ -237,6 +263,10 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
       }
    }
    #endif
+   else if(addr >= 0xA000 && addr <=0xA0FF) {
+      // VIA selection      
+      via_pins |= M6522_CS1;      
+   }
    else {
       // regular memory access
       if(read) {
@@ -246,6 +276,37 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
          mem_wr(&sys->mem_cpu, addr, M6502_GET_DATA(pins));
       }
    }
+
+   // ticks the VIA
+   {
+      //if(last_mcu_strobe != sys->nano.mcu_strobe) {
+      //   last_mcu_strobe = sys->nano.mcu_strobe;
+      //   byte unused = (byte) EM_ASM_INT({ console.log("mcu strobe to ", $0); }, sys->nano.mcu_strobe );
+      //}
+
+      // connects the nano output to the VIA input
+      M6522_SET_PA(via_pins, sys->nano.data_out);
+      M6522_SET_PB(via_pins, sys->nano.mcu_strobe ? 0xFF : 0x00);
+
+      via_pins = m6522_tick(&sys->via, via_pins);
+
+      // set VIA output to the nano input
+      sys->nano.data_in = M6522_GET_PA(via_pins);
+      sys->nano.cpu_strobe = M6522_GET_PB(via_pins) & 0x01;
+      
+      //if(last_cpu_strobe != sys->nano.cpu_strobe) {
+      //   last_cpu_strobe = sys->nano.cpu_strobe;
+      //   byte unused = (byte) EM_ASM_INT({ console.log("cpu strobe to ", $0); }, sys->nano.cpu_strobe );
+      //}
+                     
+      // reads back data from VIA
+      if((via_pins & (M6522_CS1|M6522_RW)) == (M6522_CS1|M6522_RW)) {
+         pins = M6502_COPY_DATA(pins, via_pins);
+      }
+   }
+
+   // ticks the nano
+   nano_tick(&sys->nano);
 
    return pins;
 }
@@ -280,7 +341,8 @@ bool apple1_load_prg(apple1_t* sys, const uint8_t* ptr, int num_bytes) {
    const uint16_t end_addr = start_addr + (num_bytes - 2);
    uint16_t addr = start_addr;
    while (addr < end_addr) {
-      mem_wr(&sys->mem_cpu, addr++, *ptr++);
+      //mem_wr(&sys->mem_cpu, addr++, *ptr++);
+      sys->ram[addr++] = *ptr++;  // writes also in rom
    }
 
    return true;

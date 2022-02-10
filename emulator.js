@@ -50,6 +50,10 @@ function main() {
       autoload.forEach((e,i)=>rom_load(i,e));
    }
 
+   // load sdcard emulation software
+   //fetchProgram("sdcard.prg");
+   //setTimeout(()=>paste("8000R\r"), 2000);
+
    window.addEventListener("resize", onResize);
    window.addEventListener("dblclick", goFullScreen);
 
@@ -64,3 +68,7 @@ function flip() {
    visible_screen = (visible_screen == "apple1") ? "tms9928" : "apple1";
    calculateGeometry();
 }
+
+let nano = new Nano();
+
+
