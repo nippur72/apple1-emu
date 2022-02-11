@@ -56,6 +56,27 @@ function apple1_screen_update(cursor_on) {
       }
    }
 
+   // artifacts  
+   /* 
+   ptr1 = 0;
+   ptr2 = SCREEN_W*2;
+   for(let row=0;row<24;row++) {      
+      for(let col=0;col<40;col++) {
+                     
+         let pixel = 0xff222222;                  
+         imagedata_data[ptr1  ] = pixel;
+         imagedata_data[ptr1+1] = pixel;
+         imagedata_data[ptr2  ] = pixel;
+         imagedata_data[ptr2+1] = pixel;                  
+
+         ptr1+=16;
+         ptr2+=16;
+      }
+      ptr1 += SCREEN_W*2*16 - 40*16;
+      ptr2 += SCREEN_W*2*16 - 40*16;
+   } 
+   */  
+
    // restore character under cursor
    display[cursor_y*40+cursor_x] = old_char;
 
