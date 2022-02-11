@@ -1,3 +1,39 @@
+/*
+   *** Notes about SD CARD emulation ***
+
+   The system emulates the "P-LAB SD CARD interface" which is made
+   of a MOS6522 VIA chip that interacts with an Arduino NANO MCU which in turn 
+   is interfaced to an SD card adapter.
+
+   On the emulator the VIA chip is ticked within the apple1_tick() (C/WASM side).
+   Pins from PA and PB ports of the VIA are read/written to the "nano.h" chip 
+   which is also ticked but at a rate slower than the CPU.
+
+   The "nano.h" emulates the "sdcard.ino" side, but it does it with a state machine
+   because the tick() function has to return immediately and can't be hold in the wait 
+   loops of the protocol. Due the complex nature of the state machine, the "nano.h"
+   only handles the low-level byte trasfer, and calls JavaScript (nano.js) for the
+   high-level functions on the protocol.
+
+   Nano.h calls the following JavaScript event-like functions:
+   - nano_byte_received(data)
+      when a byte has been received from the Apple-1. 
+      Must return  0 if next byte has to be received
+      Must return 10 if next byte has to be transmitted
+   - nano_byte_sent()
+      when a byte has been sent to the Apple-1
+      Must return  0 if next byte has to be received
+      Must return 10 if next byte has to be transmitted
+   - nano_timeout()
+      when the interface goes timeout
+      Put in receive mode for next byte
+
+   The JavaScript side ("nano.js") responds to the above events implementing the
+   protocol with another state machine. When sending a byte, the JavaScript side
+   calls "nano_next_byte_to_send()" which writes directly into "nano.data".
+
+*/
+
 function stringToArray(s) {
    return s.split("").map(e=>e.charCodeAt(0));
 }
