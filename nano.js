@@ -66,9 +66,9 @@ class SDCard {
          "HELLO": hello_world,
          "TEST.TXT": stringToUint8Array("THIS IS A TEST\r"),
          "JUNK": {},
-         "JUNK/JUNK1": stringToUint8Array("JUNK FILE 1\r"),
-         "JUNK/JUNK2": stringToUint8Array("JUNK FILE 2\r"),
-         "JUNK/JUNK3": stringToUint8Array("JUNK FILE 3\r"),         
+         "JUNK/JUNK1": stringToUint8Array("*** JUNK FILE 1\r"),
+         "JUNK/JUNK2": stringToUint8Array("*** JUNK FILE 2\r"),
+         "BIG":        stringToUint8Array("*-JUNK-*".repeat(2048)),         
       };
 
       // add some big files
