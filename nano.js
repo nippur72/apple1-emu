@@ -58,6 +58,10 @@ function rset(s, len) {
    return " ".repeat(len - s.length) + s;
 }
 
+function lset(s, len) {
+   return (s + " ".repeat(15)).substring(0, len);
+}
+
 class SDCard {
    constructor() {
       this.current_dir = "";
@@ -152,6 +156,7 @@ const CMD_READ  =  0;
 const CMD_WRITE =  1;
 const CMD_DIR   =  2;
 const CMD_DEL   = 11;
+const CMD_LS    = 12;
 
 class Nano {
    constructor() {
@@ -212,11 +217,15 @@ class Nano {
             // goto idle
             this.state = "write.filename";
          }
-         else if(cmd == CMD_DIR) {
+         else if(cmd == CMD_DIR || cmd == CMD_LS) {
             // dir command
             this.debug("dir command");
             let entries = this.sdcard.dir();
-            let dir = entries.map(e=>`${e.size} ${e.name}`).join("\r");
+            let dir;
+
+            if(cmd==CMD_LS) dir = entries.map(e=>`${e.size} ${e.name}`).join("\r");            
+            else            dir = entries.map(e=>`${lset(e.name,15)} ${e.size}`).join("\r");            
+
             this.send_buffer.push(...stringToArray(dir));
             this.send_buffer.push(0);
             this.state = "send";
