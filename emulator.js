@@ -51,7 +51,7 @@ function main() {
    }
 
    // load sdcard emulation software
-   //fetchProgram("sdcard.prg");
+   fetchProgram("sdcard.prg");
    //setTimeout(()=>paste("8000R\r"), 2000);
 
    window.addEventListener("resize", onResize);
