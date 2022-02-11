@@ -12,6 +12,8 @@ typedef struct {
    int next_state;
    int data;
 
+   int clk_div_counter;
+
 } nano_t;
 
 const int HIGH = 1;
@@ -39,14 +41,14 @@ bool nano_wait_cpu_strobe(nano_t *nano, int value) {
    return false;
 }
 
-
-static int www;
+#define NANO_CLK_DIV     32
+#define NANO_TIMEOUT_MAX (1000000/NANO_CLK_DIV)
 
 void nano_tick(nano_t *nano) {
 
-   www++;
-   if(www < 15) return;
-   www = 0;
+   nano->clk_div_counter++;
+   if(nano->clk_div_counter < (NANO_CLK_DIV-1)) return;
+   nano->clk_div_counter = 0;
 
    // clear next state
    nano->next_state = -1;
@@ -98,7 +100,7 @@ void nano_tick(nano_t *nano) {
 
    // ****************
 
-   if(nano->timeout_cnt > 500000/16) {      
+   if(nano->timeout_cnt > NANO_TIMEOUT_MAX) {      
       nano_timeout(nano);
       nano->next_state = 0; // go in receive mode
    }
