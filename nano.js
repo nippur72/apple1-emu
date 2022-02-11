@@ -110,8 +110,7 @@ class SDCard {
             let size = this.files[e].length.toString();
             result.push({size: rset(size, 5), name: e});  
          }
-      });
-      console.log(result);
+      });      
       return result;
    }
 
@@ -130,6 +129,11 @@ class SDCard {
       let fullname = this.pathname(filename);
       this.files[fullname] = data;
    }
+
+   removefile(filename) {
+      let fullname = this.pathname(filename);
+      delete this.files[fullname];
+   }
 }
 
 function nano_byte_received(data) { 
@@ -143,6 +147,11 @@ function nano_byte_sent() {
 function nano_timeout() {
    nano.timeout();
 }
+
+const CMD_READ  =  0;
+const CMD_WRITE =  1;
+const CMD_DIR   =  2;
+const CMD_DEL   = 11;
 
 class Nano {
    constructor() {
@@ -181,7 +190,7 @@ class Nano {
       if(this.state == "idle") {
          // parse command
          let cmd = this.receive_buffer.shift();
-         if(cmd == 0) {
+         if(cmd == CMD_READ) {
             this.debug("read command");
             // receive string from cpu
             // open file
@@ -190,7 +199,7 @@ class Nano {
             // goto idle
             this.state = "read.filename";
          }
-         else if(cmd == 1) {
+         else if(cmd == CMD_WRITE) {
             this.debug("write command");
             // receive string from cpu
             // create file
@@ -203,7 +212,7 @@ class Nano {
             // goto idle
             this.state = "write.filename";
          }
-         else if(cmd == 2) {
+         else if(cmd == CMD_DIR) {
             // dir command
             this.debug("dir command");
             let entries = this.sdcard.dir();
@@ -212,6 +221,10 @@ class Nano {
             this.send_buffer.push(0);
             this.state = "send";
             this.state_after_send = "idle";
+         }
+         else if(cmd == CMD_DEL) {
+            // del command
+            this.state = "del.filename";
          }
       }
       else if(this.state == "send") {
@@ -306,6 +319,37 @@ class Nano {
             else {
                this.send_buffer.push(0xFF); // ERR_RESPONSE
                this.send_buffer.push(...stringToArray("?CAN'T WRITE FILE\0"));
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+         }
+      }
+      else if(this.state == "del.filename") {         
+         if(this.data == 0) {
+            this.receive_buffer.pop(); // remove 0x00
+            let filename = arrayToString(this.receive_buffer);
+            this.receive_buffer = [];
+            this.debug(`filename received: "${filename}"`);
+
+            // seeks for file
+            let file_exist = this.sdcard.exists(filename);
+            if(file_exist) {
+               if(false /*this.sdcard.isDirectory(filename)*/) {
+                  this.send_buffer.push(0xFF); // ERR_RESPONSE
+                  this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+               else {
+                  this.sdcard.removefile(filename);
+                  this.send_buffer.push(...stringToArray(filename));
+                  this.send_buffer.push(...stringToArray(" DELETED\0")); // file data
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+            }
+            else {               
+               this.send_buffer.push(...stringToArray("?FILE NOT FOUND\0"));
                this.state = "send";
                this.state_after_send = "idle";
             }
