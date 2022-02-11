@@ -367,7 +367,7 @@ class Nano {
    }   
    
    timeout() {
-      console.log(`nano timeout`);
+      //console.log(`nano timeout`);
       this.reset();
    }   
 }
