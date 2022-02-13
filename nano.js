@@ -46,100 +46,6 @@ function arrayToString(a) {
    return a.map(e=>String.fromCharCode(e)).join("");
 }
 
-const hello_world = new Uint8Array([
-   0x20, 0x87, 0x02, 0x20, 0xA6, 0x02, 0x60, 0xA9, 0xAF, 0x85, 0x02, 0xA9, 0x02, 0x85, 0x03, 0xA0,
-   0x00, 0xB1, 0x02, 0xE6, 0x02, 0xD0, 0x02, 0xE6, 0x03, 0xC9, 0x00, 0xD0, 0x01, 0x60, 0x85, 0x04,
-   0x20, 0xA9, 0x02, 0x4C, 0x8F, 0x02, 0x4C, 0x1F, 0xFF, 0xA5, 0x04, 0x20, 0xEF, 0xFF, 0x60, 0x0D,
-   0x0D, 0x48, 0x45, 0x4C, 0x4C, 0x4F, 0x20, 0x57, 0x4F, 0x52, 0x4C, 0x44, 0x20, 0x46, 0x52, 0x4F,
-   0x4D, 0x20, 0x4B, 0x49, 0x43, 0x4B, 0x2D, 0x43, 0x0D, 0x0D, 0x00
-]);
-
-function rset(s, len) {
-   return " ".repeat(len - s.length) + s;
-}
-
-function lset(s, len) {
-   return (s + " ".repeat(15)).substring(0, len);
-}
-
-class SDCard {
-   constructor() {
-      this.current_dir = "";
-
-      this.files = {
-         "HELLO": hello_world,
-         "TEST.TXT": stringToUint8Array("THIS IS A TEST\r"),
-         "JUNK": {},
-         "JUNK/JUNK1": stringToUint8Array("*** JUNK FILE 1\r"),
-         "JUNK/JUNK2": stringToUint8Array("*** JUNK FILE 2\r"),
-         "BIG":        stringToUint8Array("*-JUNK-*".repeat(2048)),         
-      };
-
-      // add some big files
-      this.initcard();
-   }
-
-   async initcard() {
-      // E000 cold start, E2B3 warm start, EFEC run, CALL -151 or reset to exit
-      this.files["BASIC"]    = await fetchBytes("sdcard_image/BASIC.bin");
-      this.files["STARTREK"] = await fetchBytes("sdcard_image/STARTREK.bin");
-      this.files["CIAO.BAS"] = await fetchBytes("sdcard_image/CIAO.BAS.bin");
-   }
-
-   pathname(filename) {
-      return this.current_dir + filename;
-   }
-
-   isDirectory(entry) {
-      let fullname = this.pathname(entry);      
-      let file = this.files[fullname];
-      if(file.length === undefined) return true;
-      else return false;
-   }
-
-   dir(/*entry*/) {
-      //let fullname = this.pathname(entry);
-      //const files = Object.keys(this.files).filter(e=>e.startsWith(fullname));
-      const entries = Object.keys(this.files);
-      let result = [];
-      // dirs first
-      entries.forEach(e=>{ 
-         if(this.isDirectory(e)) {
-            result.push({size: "(DIR)", name: e});  
-         }
-      });
-      // then files
-      entries.forEach(e=>{ 
-         if(!this.isDirectory(e)) {
-            let size = this.files[e].length.toString();
-            result.push({size: rset(size, 5), name: e});  
-         }
-      });      
-      return result;
-   }
-
-   exists(entry) {
-      let fullname = this.pathname(entry);
-      const files = Object.keys(this.files);
-      return files.includes(fullname);
-   }
-
-   readfile(entry) {
-      let fullname = this.pathname(entry);
-      return this.files[fullname];
-   }
-
-   writefile(filename, data) {
-      let fullname = this.pathname(filename);
-      this.files[fullname] = data;
-   }
-
-   removefile(filename) {
-      let fullname = this.pathname(filename);
-      delete this.files[fullname];
-   }
-}
-
 function nano_byte_received(data) { 
    return nano.byte_received(data); 
 }
@@ -155,20 +61,30 @@ function nano_timeout() {
 const CMD_READ  =  0;
 const CMD_WRITE =  1;
 const CMD_DIR   =  2;
+const CMD_TIME  =  3;
+const CMD_LOAD  =  4;
+const CMD_RUN   =  5;
+const CMD_SAVE  =  6;
+const CMD_TYPE  =  7;
+const CMD_DUMP  =  8;
+const CMD_JMP   =  9;
+const CMD_BAS   = 10;
 const CMD_DEL   = 11;
 const CMD_LS    = 12;
+const CMD_CD    = 13;
+const CMD_MKDIR = 14;
+const CMD_RMDIR = 15;
+const CMD_EXIT  = 16;
 
 class Nano {
    constructor() {
       this.sdcard = new SDCard();
       this.reset();
-   }
-
-   debug(m) {
-      console.log(`nano: ${m}`);
+      this.cd_path = "";
    }
 
    reset() {
+      // also called after TIMEOUT
       this.state = "idle";
       this.state_after_send = "";
       this.data = 0;
@@ -178,6 +94,28 @@ class Nano {
       this.filename = "";
    }
 
+   // pushes a string in the send buffer
+   send_string(s) {
+      this.send_buffer.push(...stringToArray(s));
+   }
+
+   // pops a string from the receive buffer
+   pop_string() {
+      let s = arrayToString(this.receive_buffer);
+      this.receive_buffer = [];
+      return s;
+   }
+
+   get_cd_path() {
+      if(this.cd_path == "") return "/";
+      else return this.cd_path;
+   }
+
+   debug(m) {
+      console.log(`nano: ${m}`);
+   }
+
+   // event called by WASM when a byte is received
    byte_received(data) {
       //console.log(`received `, data);
       this.data = data;
@@ -185,6 +123,7 @@ class Nano {
       return this.step();
    }
 
+   // event called by WASM when a byte is sent
    byte_sent() {
       //console.log(`nano byte sent`);      
       return this.step();
@@ -195,6 +134,7 @@ class Nano {
       if(this.state == "idle") {
          // parse command
          let cmd = this.receive_buffer.shift();
+         this.cmd = cmd;
          if(cmd == CMD_READ) {
             this.debug("read command");
             // receive string from cpu
@@ -220,20 +160,27 @@ class Nano {
          else if(cmd == CMD_DIR || cmd == CMD_LS) {
             // dir command
             this.debug("dir command");
-            let entries = this.sdcard.dir();
-            let dir;
-
-            if(cmd==CMD_LS) dir = entries.map(e=>`${e.size} ${e.name}`).join("\r");            
-            else            dir = entries.map(e=>`${lset(e.name,15)} ${e.size}`).join("\r");            
-
-            this.send_buffer.push(...stringToArray(dir));
-            this.send_buffer.push(0);
-            this.state = "send";
-            this.state_after_send = "idle";
+            this.state = "dir.filename";
          }
          else if(cmd == CMD_DEL) {
             // del command
+            this.debug("del command");
             this.state = "del.filename";
+         }
+         else if(cmd == CMD_MKDIR) {
+            // mkdir command
+            this.debug("mkdir command");
+            this.state = "mkdir.filename";
+         }
+         else if(cmd == CMD_RMDIR) {
+            // rmdir command
+            this.debug("rmdir command");
+            this.state = "rmdir.filename";
+         }
+         else if(cmd == CMD_CD) {
+            // rmdir command
+            this.debug("cd command");
+            this.state = "chdir.filename";
          }
       }
       else if(this.state == "send") {
@@ -256,7 +203,7 @@ class Nano {
             this.debug(`filename received: "${filename}"`);
 
             // seeks for file
-            let file_ok = this.sdcard.exists(filename);
+            let file_ok = this.sdcard.exist(filename);
             if(file_ok) {
                if(this.sdcard.isDirectory(filename)) {
                   this.send_buffer.push(0xFF); // ERR_RESPONSE
@@ -265,7 +212,7 @@ class Nano {
                   this.state_after_send = "idle";
                }
                else {
-                  let file = this.sdcard.readfile(filename);
+                  let file = this.sdcard.readFile(filename);
                   this.debug("file read ok");
                   this.send_buffer.push(0); // OK_RESPONSE
                   this.send_buffer.push((file.length>>0) & 0xFF); // file size low byte
@@ -290,7 +237,7 @@ class Nano {
             this.receive_buffer = [];
             this.debug(`filename received: "${filename}"`);
             // create file
-            let file_ok = !this.sdcard.exists(filename);
+            let file_ok = !this.sdcard.exist(filename);
             if(file_ok) {
                this.debug("ok, file does not exist");
                this.filename = filename;
@@ -319,7 +266,7 @@ class Nano {
             let file_ok = true;
             if(file_ok) {
                this.debug(`file data received`);
-               this.sdcard.writefile(this.filename, this.receive_buffer);
+               this.sdcard.writeFile(this.filename, this.receive_buffer);
                this.receive_buffer = [];
                this.send_buffer.push(0); // OK_RESPONSE
                this.state = "send";
@@ -333,19 +280,42 @@ class Nano {
             }
          }
       }
+      else if(this.state == "dir.filename") {
+         if(this.data == 0) {
+            this.receive_buffer.pop(); // remove 0x00
+            let dirname = this.pop_string();
+            this.debug(`filename received: "${dirname}"`);
+
+            let entries = this.sdcard.getPrintableDir(dirname);
+            if(entries == undefined) {
+               this.send_buffer.push(...stringToArray("?DIR NOT FOUND\0"));
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+            else {
+               let dir_formatted;
+
+               if(this.cmd==CMD_LS) dir_formatted = entries.map(e=>`${e.size} ${e.name}`).join("\r");
+               else                 dir_formatted = entries.map(e=>`${lset(e.name,15)} ${e.size}`).join("\r");
+
+               this.send_string(dir_formatted);
+               this.send_buffer.push(0);
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+         }
+      }
       else if(this.state == "del.filename") {         
          if(this.data == 0) {
             this.receive_buffer.pop(); // remove 0x00
-            let filename = arrayToString(this.receive_buffer);
-            this.receive_buffer = [];
+            let filename = this.pop_string();
             this.debug(`filename received: "${filename}"`);
 
             // seeks for file
-            let file_exist = this.sdcard.exists(filename);
+            let file_exist = this.sdcard.exist(filename);
             if(file_exist) {
-               if(false /*this.sdcard.isDirectory(filename)*/) {
-                  this.send_buffer.push(0xFF); // ERR_RESPONSE
-                  this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
+               if(this.sdcard.isDirectory(filename)) {
+                  this.send_buffer.push(...stringToArray("?CAN'T DELETE FILE\0"));
                   this.state = "send";
                   this.state_after_send = "idle";
                }
@@ -361,6 +331,130 @@ class Nano {
                this.send_buffer.push(...stringToArray("?FILE NOT FOUND\0"));
                this.state = "send";
                this.state_after_send = "idle";
+            }
+         }
+      }
+      else if(this.state == "rmdir.filename") {
+         if(this.data == 0) {
+            this.receive_buffer.pop(); // remove 0x00
+            let dirname = arrayToString(this.receive_buffer);
+            this.receive_buffer = [];
+            this.debug(`filename received: "${dirname}"`);
+
+            let dir_exist = this.sdcard.exist(dirname);
+            if(dir_exist) {
+               if(!this.sdcard.isDirectory(dirname)) {
+                  this.send_buffer.push(...stringToArray("?NOT A DIRECTORY\0"));
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+               else if(!this.sdcard.isDirEmpty(dirname)) {
+                  this.send_buffer.push(...stringToArray("?DIR NOT EMPTY\0"));
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+               else {
+                  this.sdcard.rmdir(dirname);
+                  this.send_buffer.push(...stringToArray(dirname));
+                  this.send_buffer.push(...stringToArray(" (DIR) REMOVED\0"));
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+            }
+            else {
+               this.send_buffer.push(...stringToArray("?DIR NOT FOUND\0"));
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+         }
+      }
+      else if(this.state == "mkdir.filename") {
+         if(this.data == 0) {
+            this.receive_buffer.pop(); // remove 0x00
+            let dirname = arrayToString(this.receive_buffer);
+            this.receive_buffer = [];
+            this.debug(`filename received: "${dirname}"`);
+
+            // seeks for file
+            let dir_exist = this.sdcard.exist(dirname);
+            if(dir_exist) {
+               this.send_string("?DIR ALREADY EXISTS\0");
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+            else {
+               let create_dir_ok = this.sdcard.mkdir(dirname);
+               if(!create_dir_ok) {
+                  this.send_string("?CAN'T MAKE DIR\0");
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+               else {
+                  this.send_string(dirname);
+                  this.send_string(" (DIR) CREATED\0");
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+            }
+         }
+      }
+      else if(this.state == "chdir.filename") {
+         if(this.data == 0) {
+            this.receive_buffer.pop(); // remove 0x00
+            let dirname = this.pop_string();
+            this.debug(`dirname received: "${dirname}"`);
+
+            if(dirname=="") {
+               // does nothing, simply prints current working directory
+               this.debug("CD without arguments, printing working directory");
+               this.send_string(this.get_cd_path());
+               this.send_buffer.push(0);
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+            else if(dirname == "/") {
+               // moves to root /
+               this.debug("CD with root argument, moving to root");
+               this.sdcard.chdir_noargs();
+               this.cd_path = "";
+               this.send_string(this.get_cd_path());
+               this.send_buffer.push(0);
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+            else {
+               this.debug("CD with dirname argument");
+               if(this.sdcard.chdir(dirname)) {
+                  this.debug("CD success");
+                  this.cd_path = dirname.startsWith("/") ? dirname : `${this.cd_path}/${dirname}`;
+                  this.send_string(this.get_cd_path());
+                  this.send_buffer.push(0);
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+               else {
+                  console.log("CD failed");
+                  if(!this.sdcard.exist(dirname)) {
+                     this.debug("?DIR NOT FOUND");
+                     this.send_string("?DIR NOT FOUND\0");
+                     this.state = "send";
+                     this.state_after_send = "idle";
+                  }
+                  else {
+                     if(!this.sdcard.isDirectory(dirname)) {
+                        this.debug("?NOT A DIRECTORY");
+                        this.send_string("?NOT A DIRECTORY\0");
+                        this.state = "send";
+                        this.state_after_send = "idle";
+                     }
+                     else {
+                        this.debug("?CAN'T CHANGE DIR");
+                        this.send_string("?CAN'T CHANGE DIR\0");
+                        this.state = "send";
+                        this.state_after_send = "idle";
+                     }
+                  }
+               }
             }
          }
       }
