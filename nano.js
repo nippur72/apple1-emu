@@ -75,6 +75,10 @@ const CMD_CD    = 13;
 const CMD_MKDIR = 14;
 const CMD_RMDIR = 15;
 const CMD_EXIT  = 16;
+const CMD_PWD   = 19;
+
+const OK_RESPONSE  = 0x00;
+const ERR_RESPONSE = 0xFF;
 
 class Nano {
    constructor() {
@@ -135,6 +139,7 @@ class Nano {
          // parse command
          let cmd = this.receive_buffer.shift();
          this.cmd = cmd;
+         this.debug(`cmd: ${cmd}`);
          if(cmd == CMD_READ) {
             this.debug("read command");
             // receive string from cpu
@@ -182,6 +187,14 @@ class Nano {
             this.debug("cd command");
             this.state = "chdir.filename";
          }
+         else if(cmd == CMD_PWD) {
+            // rmdir command
+            this.debug("pwd command");
+            this.send_string(this.get_cd_path());
+            this.send_buffer.push(0);
+            this.state = "send";
+            this.state_after_send = "idle";            
+         }
       }
       else if(this.state == "send") {
          //console.log(this.send_buffer);
@@ -206,7 +219,7 @@ class Nano {
             let file_ok = this.sdcard.exist(filename);
             if(file_ok) {
                if(this.sdcard.isDirectory(filename)) {
-                  this.send_buffer.push(0xFF); // ERR_RESPONSE
+                  this.send_buffer.push(ERR_RESPONSE);
                   this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
                   this.state = "send";
                   this.state_after_send = "idle";
@@ -223,7 +236,7 @@ class Nano {
                }
             }
             else {
-               this.send_buffer.push(0xFF); // ERR_RESPONSE
+               this.send_buffer.push(ERR_RESPONSE);
                this.send_buffer.push(...stringToArray("?FILE NOT FOUND\0"));
                this.state = "send";
                this.state_after_send = "idle";
@@ -241,12 +254,12 @@ class Nano {
             if(file_ok) {
                this.debug("ok, file does not exist");
                this.filename = filename;
-               this.send_buffer.push(0x00); // OK_RESPONSE
+               this.send_buffer.push(OK_RESPONSE);
                this.state = "send";
                this.state_after_send = "write.filesize";
             }
             else {
-               this.send_buffer.push(0xFF); // ERR_RESPONSE
+               this.send_buffer.push(ERR_RESPONSE);
                this.send_buffer.push(...stringToArray("?ALREADY EXISTS\0"));
                this.state = "send";
                this.state_after_send = "idle";
@@ -268,12 +281,12 @@ class Nano {
                this.debug(`file data received`);
                this.sdcard.writeFile(this.filename, this.receive_buffer);
                this.receive_buffer = [];
-               this.send_buffer.push(0); // OK_RESPONSE
+               this.send_buffer.push(OK_RESPONSE);
                this.state = "send";
                this.state_after_send = "idle";
             }
             else {
-               this.send_buffer.push(0xFF); // ERR_RESPONSE
+               this.send_buffer.push(ERR_RESPONSE);
                this.send_buffer.push(...stringToArray("?CAN'T WRITE FILE\0"));
                this.state = "send";
                this.state_after_send = "idle";
@@ -404,11 +417,21 @@ class Nano {
             let dirname = this.pop_string();
             this.debug(`dirname received: "${dirname}"`);
 
+            let parent = function(fullpath) {               
+               let s = fullpath.split("/");
+               s.pop();               
+               if(s.length <= 1) return "/";               
+               return s.join("/");                
+            }
+          
+            if(dirname == "..") {
+               dirname = parent(this.cd_path);               
+            }
+
             if(dirname=="") {
                // does nothing, simply prints current working directory
-               this.debug("CD without arguments, printing working directory");
-               this.send_string(this.get_cd_path());
-               this.send_buffer.push(0);
+               this.debug("CD without arguments, does nothing");               
+               this.send_buffer.push(OK_RESPONSE);
                this.state = "send";
                this.state_after_send = "idle";
             }
@@ -416,9 +439,8 @@ class Nano {
                // moves to root /
                this.debug("CD with root argument, moving to root");
                this.sdcard.chdir_noargs();
-               this.cd_path = "";
-               this.send_string(this.get_cd_path());
-               this.send_buffer.push(0);
+               this.cd_path = "";               
+               this.send_buffer.push(OK_RESPONSE);
                this.state = "send";
                this.state_after_send = "idle";
             }
@@ -426,9 +448,8 @@ class Nano {
                this.debug("CD with dirname argument");
                if(this.sdcard.chdir(dirname)) {
                   this.debug("CD success");
-                  this.cd_path = dirname.startsWith("/") ? dirname : `${this.cd_path}/${dirname}`;
-                  this.send_string(this.get_cd_path());
-                  this.send_buffer.push(0);
+                  this.cd_path = dirname.startsWith("/") ? dirname : `${this.cd_path}/${dirname}`;                  
+                  this.send_buffer.push(OK_RESPONSE);
                   this.state = "send";
                   this.state_after_send = "idle";
                }
@@ -436,6 +457,7 @@ class Nano {
                   console.log("CD failed");
                   if(!this.sdcard.exist(dirname)) {
                      this.debug("?DIR NOT FOUND");
+                     this.send_buffer.push(ERR_RESPONSE);
                      this.send_string("?DIR NOT FOUND\0");
                      this.state = "send";
                      this.state_after_send = "idle";
@@ -443,12 +465,14 @@ class Nano {
                   else {
                      if(!this.sdcard.isDirectory(dirname)) {
                         this.debug("?NOT A DIRECTORY");
+                        this.send_buffer.push(ERR_RESPONSE);
                         this.send_string("?NOT A DIRECTORY\0");
                         this.state = "send";
                         this.state_after_send = "idle";
                      }
                      else {
                         this.debug("?CAN'T CHANGE DIR");
+                        this.send_buffer.push(ERR_RESPONSE);
                         this.send_string("?CAN'T CHANGE DIR\0");
                         this.state = "send";
                         this.state_after_send = "idle";

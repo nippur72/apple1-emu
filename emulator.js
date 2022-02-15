@@ -51,8 +51,7 @@ function main() {
    }
 
    // load sdcard emulation software
-   fetchProgram("sdcard.prg");
-   //setTimeout(()=>paste("8000R\r"), 2000);
+   fetchProgram("sdcard.prg").then(()=>setTimeout(()=>paste("8000R\r"), 2500));
 
    window.addEventListener("resize", onResize);
    window.addEventListener("dblclick", goFullScreen);
