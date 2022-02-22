@@ -13,6 +13,7 @@ typedef struct {
    int data;
 
    int clk_div_counter;
+   int direction_change_counter;
 
 } nano_t;
 
@@ -28,11 +29,11 @@ int nano_byte_received(nano_t *nano) {
 }
 
 int nano_byte_sent(nano_t *nano) {
-  return EM_ASM_INT({ return nano_byte_sent(); }, 0 );
+  return EM_ASM_INT({ return nano_byte_sent($0); }, nano->data );
 }
 
 void nano_timeout(nano_t *nano) {
-   byte unused = (byte) EM_ASM_INT({ nano_timeout($0); }, 0 );
+   byte unused = (byte) EM_ASM_INT({ nano_timeout($0); }, nano->state );
 }
 
 bool nano_wait_cpu_strobe(nano_t *nano, int value) {
@@ -55,7 +56,8 @@ void nano_tick(nano_t *nano) {
 
    if(nano->state == 0) {
       // receive: waiting for CPU strobe
-      if(nano_wait_cpu_strobe(nano, HIGH)) nano->next_state = 1;      
+      //if(nano_wait_cpu_strobe(nano, HIGH)) nano->next_state = 1;
+      if(nano_wait_cpu_strobe(nano, HIGH)) nano->next_state = 1;
    } 
    else if(nano->state == 1) {
       // receive: responding to CPU HI strobe
@@ -97,6 +99,13 @@ void nano_tick(nano_t *nano) {
    else if(nano->state == 14) {
       nano->next_state = nano_byte_sent(nano);      
    }
+   else if(nano->state == 100 || nano->state == 110) {
+      nano->direction_change_counter--;
+      if(nano->direction_change_counter == 0) {
+         if(nano->state == 100) nano->next_state =  0;
+         if(nano->state == 110) nano->next_state = 10;
+      }
+   }
 
    // ****************
 
@@ -108,6 +117,21 @@ void nano_tick(nano_t *nano) {
    if(nano->next_state != -1) {
       // state change
       //byte unused = (byte) EM_ASM_INT({ console.log("state transition", $0); }, nano->next_state );
+      if(nano->next_state == 10 && nano->state < 10) {
+         // byte unused = (byte) EM_ASM_INT({ console.log("NANO TRANSMIT MODE"); }, 0 );
+         nano->next_state = 110;
+         nano->direction_change_counter = 2;
+      }
+      if(nano->next_state == 0 && (nano->state >= 10 && nano->state < 100) ) {
+         // byte unused = (byte) EM_ASM_INT({ console.log("NANO RECEIVE MODE"); }, 0 );
+         nano->next_state = 100;
+         nano->direction_change_counter = 2;
+      }
+
+      //{
+      //   byte unused = (byte) EM_ASM_INT({ console.log($0,$1,hex(mem_read(0xe0))); }, nano->mcu_strobe, nano->cpu_strobe );
+      //}
+
       nano->state = nano->next_state;
       nano->timeout_cnt = 0;      
    }

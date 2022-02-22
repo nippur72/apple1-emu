@@ -50,12 +50,12 @@ function nano_byte_received(data) {
    return nano.byte_received(data); 
 }
 
-function nano_byte_sent() { 
-   return nano.byte_sent(); 
+function nano_byte_sent(data) {
+   return nano.byte_sent(data);
 }
 
-function nano_timeout() {
-   nano.timeout();
+function nano_timeout(nano_state) {
+   nano.timeout(nano_state);
 }
 
 const CMD_READ  =  0;
@@ -76,6 +76,7 @@ const CMD_MKDIR = 14;
 const CMD_RMDIR = 15;
 const CMD_EXIT  = 16;
 const CMD_PWD   = 19;
+const CMD_TEST  = 20;
 
 const OK_RESPONSE  = 0x00;
 const ERR_RESPONSE = 0xFF;
@@ -128,8 +129,8 @@ class Nano {
    }
 
    // event called by WASM when a byte is sent
-   byte_sent() {
-      //console.log(`nano byte sent`);      
+   byte_sent(data) {
+      //console.log(`nano byte sent ${data}`);
       return this.step();
    }
 
@@ -139,7 +140,7 @@ class Nano {
          // parse command
          let cmd = this.receive_buffer.shift();
          this.cmd = cmd;
-         this.debug(`cmd: ${cmd}`);
+         //this.debug(`cmd: ${cmd}`);
          if(cmd == CMD_READ) {
             this.debug("read command");
             // receive string from cpu
@@ -194,6 +195,11 @@ class Nano {
             this.send_buffer.push(0);
             this.state = "send";
             this.state_after_send = "idle";            
+         }
+         else if(cmd == CMD_TEST) {
+            // rmdir command
+            this.debug("test command");
+            this.state = "test.receivebyte";
          }
       }
       else if(this.state == "send") {
@@ -482,6 +488,13 @@ class Nano {
             }
          }
       }
+      else if(this.state == "test.receivebyte") {
+         let data = this.receive_buffer.pop();
+         data ^= 0xFF;
+         this.send_buffer.push(data);
+         this.state = "send";
+         this.state_after_send = "test.receivebyte";
+      }
       else throw `invalid state ${this.state}`;
 
       if(this.send_buffer.length > 0) {
@@ -493,8 +506,9 @@ class Nano {
       }
    }   
    
-   timeout() {
-      //console.log(`nano timeout`);
+   timeout(nano_state) {
+      //console.log(`nano timeout ${nano_state}, debug1=${hex(mem_read(0xe0))}`);
+      //apple1.print_pc();
       this.reset();
    }   
 }
