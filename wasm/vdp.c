@@ -8,11 +8,11 @@ tms9928_desc_t vdp_desc;
 byte vram[16384];
 uint32_t display_buffer[342*262];
 
-byte int_NMI;
-
+/*
 void tms9928_interrupt_called(uint8_t int_state) {
-   int_NMI = int_state;
+   byte unused = (byte) EM_ASM_INT({ console.log("INT", $0); }, int_state );
 }
+*/
 
 int cnt = 0;
 void tms9928_screen_update_called(uint32_t *buffer) {
@@ -33,7 +33,7 @@ void vdp_init() {
 
    vdp_desc.display_buffer = display_buffer;
 
-   vdp_desc.out_int_line_cb = &tms9928_interrupt_called;
+   vdp_desc.out_int_line_cb = 0; // &tms9928_interrupt_called;
    vdp_desc.screen_update_cb = &tms9928_screen_update_called;
 
    tms9928_init(&vdp, &vdp_desc);

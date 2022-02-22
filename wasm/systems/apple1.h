@@ -305,6 +305,12 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
       }
    }
 
+   // set IRQ from VIA6522
+   if(via_pins & M6522_IRQ) pins |= M6502_IRQ;
+
+   // set IRQ from TMS9928
+   if(vdp.m_INT) pins |= M6502_IRQ;   
+   
    // ticks the nano
    nano_tick(&sys->nano);
 
