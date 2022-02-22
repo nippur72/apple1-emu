@@ -108,3 +108,9 @@ EMSCRIPTEN_KEEPALIVE
 void sys_nano_next_byte_to_send(uint8_t data) {
    sys.nano.data = data;
 }
+
+EMSCRIPTEN_KEEPALIVE
+void sys_print_pc() {
+   uint16_t pc = sys.cpu.PC;
+   byte unused = (byte) EM_ASM_INT({ console.log(hex($0,4)); }, pc );
+}
