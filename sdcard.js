@@ -70,9 +70,9 @@ class SDCard {
 
    async initcard() {
       // E000 cold start, E2B3 warm start, EFEC run, CALL -151 or reset to exit
-      this.files["BASIC"]    = await fetchBytes("sdcard_image/BASIC.bin");
-      this.files["STARTREK"] = await fetchBytes("sdcard_image/STARTREK.bin");
-      this.files["CIAO.BAS"] = await fetchBytes("sdcard_image/CIAO.BAS.bin");
+      this.files["BASIC#06E000"]    = await fetchBytes("sdcard_image/BASIC.bin");
+      this.files["STARTREK#F10300"] = await fetchBytes("sdcard_image/STARTREK.bin");
+      this.files["CIAO.BAS#F10800"] = await fetchBytes("sdcard_image/CIAO.BAS.bin");
    }
 
    extract(path) {
@@ -134,14 +134,31 @@ class SDCard {
       // dirs first
       entries.forEach(e=>{
          if(cd[e].length === undefined) {
-            result.push({size: "(DIR)", name: e});
+            result.push({
+               size: "(DIR)",
+               name: e,
+               shortname: e,
+               type: "",
+               address: ""
+            });
          }
       });
       // then files
       entries.forEach(e=>{
          if(cd[e].length !== undefined) {
             let size = cd[e].length.toString();
-            result.push({size: rset(size, 5), name: e});
+            let s = (e+"#").split("#");
+            let type = s[1].substring(0, 2);
+            let address = s[1].substring(2);
+            if(type == "06") type = "BIN";
+            if(type == "F1") type = "BAS";
+            result.push({
+               size: rset(size, 5),
+               name: e,
+               shortname: s[0],
+               type,
+               address
+            });
          }
       });
       return result;
@@ -152,6 +169,16 @@ class SDCard {
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       return dir[fileName] !== undefined;
+   }
+
+   matchname(fullpath) {
+      let { path, fileName } = this.extract(fullpath);
+      let dir = this.getDir(path);
+      if(dir === undefined) return { list: [], match: undefined };
+      let list = Object.keys(dir);
+      let match = list.filter(e=>e.startsWith(fileName)).shift();
+      if(match !== undefined) match = path + match;
+      return { list, match };
    }
 
    readFile(fullpath) {

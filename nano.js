@@ -78,8 +78,9 @@ const CMD_EXIT  = 16;
 const CMD_PWD   = 19;
 const CMD_TEST  = 20;
 
-const OK_RESPONSE  = 0x00;
-const ERR_RESPONSE = 0xFF;
+const OK_RESPONSE   = 0x00;
+const WAIT_RESPONSE = 0x01;
+const ERR_RESPONSE  = 0xFF;
 
 class Nano {
    constructor() {
@@ -122,7 +123,7 @@ class Nano {
 
    // event called by WASM when a byte is received
    byte_received(data) {
-      //console.log(`received `, data);
+      //this.debug(`byte_received: ${data}`);
       this.data = data;
       this.receive_buffer.push(this.data);
       return this.step();
@@ -130,12 +131,14 @@ class Nano {
 
    // event called by WASM when a byte is sent
    byte_sent(data) {
-      //console.log(`nano byte sent ${data}`);
+      //this.debug(`byte_sent ${data}`);
       return this.step();
    }
 
    // step the state machine
    step() {
+      //this.debug(`step(): state is "${this.state}"`);
+
       if(this.state == "idle") {
          // parse command
          let cmd = this.receive_buffer.shift();
@@ -162,6 +165,15 @@ class Nano {
             // else put [0x0FF,string error message] in send buffer
             // goto idle
             this.state = "write.filename";
+         }
+         if(cmd == CMD_LOAD) {
+            this.debug("load command");
+            // receive string from cpu
+            // open file
+            // if ok: put [0x00, file_size, file_data] in send buffer
+            // else:  put [0x0FF,string error message] in send buffer
+            // goto idle
+            this.state = "load.filename";
          }
          else if(cmd == CMD_DIR || cmd == CMD_LS) {
             // dir command
@@ -204,14 +216,15 @@ class Nano {
       }
       else if(this.state == "send") {
          //console.log(this.send_buffer);
-         if(this.send_buffer.length == 0) {            
+         if(this.send_buffer.length == 0) {
             // send ended, go in idle mode
             this.state = this.state_after_send;
+            this.state_after_send = "";
             return 0; 
          }
          else {
             apple1.nano_next_byte_to_send(this.send_buffer.shift());
-            return 10;   
+            return 10;
          }
       }
       else if(this.state == "read.filename") {         
@@ -299,6 +312,50 @@ class Nano {
             }
          }
       }
+      else if(this.state == "load.filename") {
+         if(this.data == 0) {
+            this.receive_buffer.pop(); // remove 0x00
+            let filename = arrayToString(this.receive_buffer);
+            this.receive_buffer = [];
+            this.debug(`LOAD filename received: "${filename}"`);
+
+            let { list, match } = this.sdcard.matchname(filename);
+
+            // sends as many WAITs as file entries
+            list.forEach(e=>this.send_buffer.push(WAIT_RESPONSE));
+
+            filename = match;
+
+            // seeks for file
+            let file_ok = filename != undefined && this.sdcard.exist(filename);
+            if(file_ok) {
+               if(this.sdcard.isDirectory(filename)) {
+                  this.send_buffer.push(ERR_RESPONSE);
+                  this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+               else {
+                  let file = this.sdcard.readFile(filename);
+                  this.debug("file read ok");
+                  this.send_buffer.push(0); // OK_RESPONSE
+                  this.send_buffer.push(...stringToArray(filename));
+                  this.send_buffer.push(0);
+                  this.send_buffer.push((file.length>>0) & 0xFF); // file size low byte
+                  this.send_buffer.push((file.length>>8) & 0xFF); // file size high byte
+                  this.send_buffer.push(...file); // file data
+                  this.state = "send";
+                  this.state_after_send = "idle";
+               }
+            }
+            else {
+               this.send_buffer.push(ERR_RESPONSE);
+               this.send_buffer.push(...stringToArray("?FILE NOT FOUND\0"));
+               this.state = "send";
+               this.state_after_send = "idle";
+            }
+         }
+      }
       else if(this.state == "dir.filename") {
          if(this.data == 0) {
             this.receive_buffer.pop(); // remove 0x00
@@ -307,17 +364,20 @@ class Nano {
 
             let entries = this.sdcard.getPrintableDir(dirname);
             if(entries == undefined) {
+               this.send_buffer.push(ERR_RESPONSE);
                this.send_buffer.push(...stringToArray("?DIR NOT FOUND\0"));
                this.state = "send";
                this.state_after_send = "idle";
             }
             else {
+               this.send_buffer.push(OK_RESPONSE);
+
                let dir_formatted;
 
-               if(this.cmd==CMD_LS) dir_formatted = entries.map(e=>`${e.size} ${e.name}`).join("\r");
-               else                 dir_formatted = entries.map(e=>`${lset(e.name,15)} ${e.size}`).join("\r");
+               if(this.cmd==CMD_LS) dir_formatted = entries.map(e=>`${e.size} ${e.name}`);
+               else                 dir_formatted = entries.map(e=>`${lset(e.shortname,15)} ${e.size} ${e.type} ${e.address}`);
 
-               this.send_string(dir_formatted);
+               this.send_string(dir_formatted.join("\r"));
                this.send_buffer.push(0);
                this.state = "send";
                this.state_after_send = "idle";

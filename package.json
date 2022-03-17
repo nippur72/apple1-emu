@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Apple-1 emulator",
   "scripts": {
-    "start": "start hostr -p 8080"
+    "start": "start http-server -p 8080"
   },
   "repository": {
     "type": "git",
