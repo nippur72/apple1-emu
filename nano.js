@@ -370,19 +370,45 @@ class Nano {
                this.state_after_send = "idle";
             }
             else {
-               this.send_buffer.push(OK_RESPONSE);
-
                let dir_formatted;
 
                if(this.cmd==CMD_LS) dir_formatted = entries.map(e=>`${e.size} ${e.name}`);
                else                 dir_formatted = entries.map(e=>`${lset(e.shortname,15)} ${e.size} ${e.type} ${e.address}`);
 
-               this.send_string(dir_formatted.join("\r"));
-               this.send_buffer.push(0);
+               this.dir_formatted = dir_formatted;
+
+               this.send_buffer.push(OK_RESPONSE);
+               this.state = "send";
+               this.state_after_send = "dir.nextline";
+            }
+         }
+      }
+      else if(this.state == "dir.nextline") {
+         this.receive_buffer.pop(); // remove response
+         if(this.data == ERR_RESPONSE) {            
+            // user want to stop listing
+            this.state = "idle";
+         }
+         else if(this.data == WAIT_RESPONSE) {
+            // user want to wait, do nothing but keep listening
+            this.state = "dir.nextline";            
+         }
+         else {
+            // OK_RESPONSE, user wants another line
+            let line = this.dir_formatted.shift();
+            if(line === undefined) {               
+               this.send_buffer.push(ERR_RESPONSE);  // no more lines
                this.state = "send";
                this.state_after_send = "idle";
             }
-         }
+            else {
+               this.send_buffer.push(OK_RESPONSE);  // yes there's a line coming
+               this.send_string(line);
+               this.send_buffer.push(13);  // line terminator                
+               this.state = "send";
+               this.state_after_send = "dir.nextline";
+            }
+         }         
       }
       else if(this.state == "del.filename") {         
          if(this.data == 0) {
