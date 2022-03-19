@@ -23,6 +23,13 @@ let display = new Uint8Array(40*24).fill(32);
 let cursor_x = 0;
 let cursor_y = 0;
 
+/*
+          1         2         3         4         5         6         7         8         9         0         1         2
+01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567
+@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_ !"#$%&'()*+,-./0123456789:;<=>?
+                                 !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+*/
+
 function display_receivechar(data) {
    if(data == -1) {
       // special code to clear the screen
@@ -32,16 +39,14 @@ function display_receivechar(data) {
       return;
    }
 
+   data = data & 0x7f;
    if(data == 0x0d || data == 0x8d) {
       cursor_x = 0;
       cursor_y++;
    }
    else {
-      // fix datat to charset rom
-      data &= 127;
-      if(data >= 96 )    data -= 32;
-      else if(data < 32) data += 32;
-
+      if(data < 32) return;
+      if(data > 63) data = data & 31;
       display[cursor_y*40+cursor_x] = data;
       cursor_x++;
       if(cursor_x >= 40) {
