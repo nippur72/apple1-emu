@@ -110,7 +110,7 @@ function paste(s) {
          let k = data.shift();
          apple1keyboard.keyboard_presskey(k);         
          counter = 0;
-         if(k == 0x0D) setTimeout(paste_char, 4000);
+         if(k == 0x0D) setTimeout(paste_char, 500);
          else          setTimeout(paste_char, 16);
       }
       else {

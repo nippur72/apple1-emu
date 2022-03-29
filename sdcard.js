@@ -49,6 +49,11 @@ class SDCard {
 
       this.root = {
          "EMPTYDIR": {},
+         "HELP": {
+            "COMMANDS.TXT": stringToUint8Array("*** HELP OF COMMANDS ***\rBLA BLA ...\r"),
+            "DIR.TXT":      stringToUint8Array("HELP FILE OF DIR\r"),
+            "LOAD.TXT":     stringToUint8Array("HELP FILE OF LOAD\r"),
+         },
          "BIG":      stringToUint8Array("*-JUNK-*".repeat(2048)),
          "HELLO":    hello_world,
          "TEST.TXT": stringToUint8Array("THIS IS A TEST\r"),
@@ -150,6 +155,7 @@ class SDCard {
             let s = (e+"#").split("#");
             let type = s[1].substring(0, 2);
             let address = s[1].substring(2);
+            if(address.length > 0) address = "$" + address;
             if(type == "06") type = "BIN";
             if(type == "F1") type = "BAS";
             result.push({

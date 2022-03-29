@@ -77,6 +77,7 @@ const CMD_RMDIR = 15;
 const CMD_EXIT  = 16;
 const CMD_PWD   = 19;
 const CMD_TEST  = 20;
+const CMD_MOUNT = 23;
 
 const OK_RESPONSE   = 0x00;
 const WAIT_RESPONSE = 0x01;
@@ -209,9 +210,15 @@ class Nano {
             this.state_after_send = "idle";            
          }
          else if(cmd == CMD_TEST) {
-            // rmdir command
             this.debug("test command");
             this.state = "test.receivebyte";
+         }
+         else if(cmd == CMD_MOUNT) {
+            this.debug("pwd command");
+            this.send_string("MOUNTING SD CARD...\rOK\0");
+            this.send_buffer.push(0);
+            this.state = "send";
+            this.state_after_send = "idle";
          }
       }
       else if(this.state == "send") {
