@@ -48,6 +48,7 @@ class SDCard {
    constructor() {
 
       this.root = {
+         "ASOFT": {},
          "EMPTYDIR": {},
          "HELP": {
             "COMMANDS.TXT": stringToUint8Array("*** HELP OF COMMANDS ***\rBLA BLA ...\r"),
@@ -78,6 +79,8 @@ class SDCard {
       this.files["BASIC#06E000"]    = await fetchBytes("sdcard_image/BASIC.bin");
       this.files["STARTREK#F10300"] = await fetchBytes("sdcard_image/STARTREK.bin");
       this.files["CIAO.BAS#F10800"] = await fetchBytes("sdcard_image/CIAO.BAS.bin");
+      this.files["ASOFT"]["APPLESOFT#066000"] = await fetchBytes("sdcard_image/ASOFT/APPLESOFT.bin");
+      this.files["ASOFT"]["LEMO#F80801"]      = await fetchBytes("sdcard_image/ASOFT/LEMO.bin");
    }
 
    extract(path) {
@@ -156,8 +159,10 @@ class SDCard {
             let type = s[1].substring(0, 2);
             let address = s[1].substring(2);
             if(address.length > 0) address = "$" + address;
-            if(type == "06") type = "BIN";
-            if(type == "F1") type = "BAS";
+                 if(type == "06") type = "BIN";
+            else if(type == "F1") type = "BAS";
+            else if(type == "F8") type = "ASB";
+            else if(type.length>0) type = "#" + type;
             result.push({
                size: rset(size, 5),
                name: e,
@@ -247,3 +252,13 @@ class SDCard {
       return subfiles.length == 0;
    }
 }
+
+/*
+https://github.com/txgx42/applesoft-lite
+(function() {
+   let VARTAB = hex(mem_read_word(0x0069),4);
+   let TXTTAB = hex(mem_read_word(0x0067),4);
+   let PRGEND = hex(mem_read_word(0x00AF),4);
+   console.log({VARTAB, TXTTAB, PRGEND})
+})();
+*/
