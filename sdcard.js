@@ -50,6 +50,9 @@ class SDCard {
       this.root = {
          "ASOFT": {},
          "EMPTYDIR": {},
+         "LONGDIR": {
+            "12345678901234567890123456789012#061000": stringToUint8Array("THIS IS A LONG FILE NAME\r"),
+         },
          "HELP": {
             "COMMANDS.TXT": stringToUint8Array("*** HELP OF COMMANDS ***\rBLA BLA ...\r"),
             "DIR.TXT":      stringToUint8Array("HELP FILE OF DIR\r"),
@@ -79,8 +82,8 @@ class SDCard {
       this.files["BASIC#06E000"]    = await fetchBytes("sdcard_image/BASIC.bin");
       this.files["STARTREK#F10300"] = await fetchBytes("sdcard_image/STARTREK.bin");
       this.files["CIAO.BAS#F10800"] = await fetchBytes("sdcard_image/CIAO.BAS.bin");
-      this.files["ASOFT"]["APPLESOFT#066000"] = await fetchBytes("sdcard_image/ASOFT/APPLESOFT.bin");
-      this.files["ASOFT"]["LEMO#F80801"]      = await fetchBytes("sdcard_image/ASOFT/LEMO.bin");
+      this.files["ASOFT"]["APPLESOFT-SD#066000"] = await fetchBytes("sdcard_image/ASOFT/applesoft-lite-sdcard.bin");
+      this.files["ASOFT"]["LEMO#F80801"] = await fetchBytes("sdcard_image/ASOFT/LEMO.bin");
    }
 
    extract(path) {
@@ -263,6 +266,7 @@ https://github.com/txgx42/applesoft-lite
    let VARTAB = hex(mem_read_word(0x0069),4);
    let TXTTAB = hex(mem_read_word(0x0067),4);
    let PRGEND = hex(mem_read_word(0x00AF),4);
-   console.log({VARTAB, TXTTAB, PRGEND})
+   let MEMSIZ = hex(mem_read_word(0x0073),4);
+   console.log({VARTAB, TXTTAB, PRGEND, MEMSIZ})
 })();
 */
