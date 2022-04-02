@@ -86,7 +86,7 @@ class SDCard {
    extract(path) {
       let names = path.split("/");
       let fileName = names.pop();
-      if(path.startsWith("/")) names[0] = "/";
+      if(names[0]=="/") names[0] = "";
       let dirs = names.join("/");
       return { path: dirs, fileName };
    }
