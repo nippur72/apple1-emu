@@ -183,12 +183,16 @@ class SDCard {
    }
 
    matchname(fullpath) {
-      let { path, fileName } = this.extract(fullpath);
-      let dir = this.getDir(path);
+      let { path, fileName } = this.extract(fullpath);      
+      let dir = this.getDir(path);      
       if(dir === undefined) return { list: [], match: undefined };
       let list = Object.keys(dir);
-      let match = list.filter(e=>e.startsWith(fileName)).shift();
-      if(match !== undefined) match = path + match;
+      let match = list.filter(e=>e.startsWith(fileName)).shift();      
+      if(match !== undefined) {
+              if(path == "")  match = match;
+         else if(path == "/") match = path+match;
+         else                 match = path + "/" + match;      
+      }
       return { list, match };
    }
 
