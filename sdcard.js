@@ -84,14 +84,24 @@ class SDCard {
       this.files["CIAO.BAS#F10800"] = await fetchBytes("sdcard_image/CIAO.BAS.bin");
       this.files["ASOFT"]["APPLESOFT-SD#066000"] = await fetchBytes("sdcard_image/ASOFT/applesoft-lite-sdcard.bin");
       this.files["ASOFT"]["LEMO#F80801"] = await fetchBytes("sdcard_image/ASOFT/LEMO.bin");
+      this.files["ASOFT"]["HELLO#F80801"] = await fetchBytes("sdcard_image/ASOFT/HELLO.bin");
    }
 
-   extract(path) {
-      let names = path.split("/");
-      let fileName = names.pop();
-      if(names[0]=="/") names[0] = "";
-      let dirs = names.join("/");
-      return { path: dirs, fileName };
+   // splits filename into { path, fileName } as in .ino
+   split_path(fullpath) {
+      let x = fullpath.lastIndexOf("/");
+      let path, fileName;
+
+      if(x == -1) {
+         path = "";
+         fileName = fullpath;
+      }
+      else {
+         if(x==0) path = "/";
+         else     path = fullpath.substring(0,x);
+         fileName = fullpath.substring(x+1);
+      }
+      return { path, fileName };
    }
 
    // returns the directory pointed by path ord undefined if not found or if file
@@ -132,7 +142,7 @@ class SDCard {
          cd = this.root;
       }
       else {
-         let { path, fileName } = this.extract(fullpath);
+         let { path, fileName } = this.split_path(fullpath);
          let dir = this.getDir(path);
          if(dir === undefined) return undefined;
          if(dir[fileName] == undefined) return undefined;
@@ -179,18 +189,18 @@ class SDCard {
    }
 
    exist(fullpath) {
-      let { path, fileName } = this.extract(fullpath);
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       return dir[fileName] !== undefined;
    }
 
    matchname(fullpath) {
-      let { path, fileName } = this.extract(fullpath);      
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);      
       if(dir === undefined) return { list: [], match: undefined };
       let list = Object.keys(dir);
-      let match = list.filter(e=>e.startsWith(fileName)).shift();      
+      let match = list.filter(e=>e.startsWith(fileName)).shift();
       if(match !== undefined) {
               if(path == "")  match = match;
          else if(path == "/") match = path+match;
@@ -200,14 +210,14 @@ class SDCard {
    }
 
    readFile(fullpath) {
-      let { path, fileName } = this.extract(fullpath);
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
       if(dir === undefined) return undefined;
       return dir[fileName];
    }
 
    writeFile(fullpath, data) {
-      let { path, fileName } = this.extract(fullpath);
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       dir[fileName] = data;
@@ -215,7 +225,7 @@ class SDCard {
    }
 
    removefile(fullpath) {
-      let { path, fileName } = this.extract(fullpath);
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       delete dir[fileName];
@@ -223,7 +233,7 @@ class SDCard {
    }
 
    rmdir(fullpath) {
-      let { path, fileName } = this.extract(fullpath);
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       delete dir[fileName];
@@ -231,7 +241,7 @@ class SDCard {
    }
 
    mkdir(fullpath) {
-      let { path, fileName } = this.extract(fullpath);
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       dir[fileName] = {};
@@ -244,7 +254,7 @@ class SDCard {
    }
 
    chdir(fullpath) {
-      let { path, fileName } = this.extract(fullpath);
+      let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       if(dir[fileName] == undefined) return false;
@@ -258,6 +268,20 @@ class SDCard {
       let subfiles = Object.keys(dir);
       return subfiles.length == 0;
    }
+
+   download(fullpath) {
+      let { match } = this.matchname(fullpath);
+      let file = this.readFile(match);
+      if(file !== undefined) {
+         let bytes = new Uint8Array(file);
+         let { fileName } = this.split_path(match);
+         let blob = new Blob([bytes], {type: "application/octet-stream"});
+         saveAs(blob, fileName);
+         console.log(`downloaded "${fileName}"`);
+      } else {
+         console.log(`? file not found`);
+      }
+   }
 }
 
 /*
@@ -270,3 +294,45 @@ https://github.com/txgx42/applesoft-lite
    console.log({VARTAB, TXTTAB, PRGEND, MEMSIZ})
 })();
 */
+
+// =====================================================================================
+// =====================================================================================
+// =====================================================================================
+// =====================================================================================
+// =====================================================================================
+
+
+function deepEqual(object1, object2) {
+   function isObject(object) {
+      return object != null && typeof object === 'object';
+   }
+   const keys1 = Object.keys(object1);
+   const keys2 = Object.keys(object2);
+   if (keys1.length !== keys2.length) {
+      return false;
+   }
+   for (const key of keys1) {
+      const val1 = object1[key];
+      const val2 = object2[key];
+      const areObjects = isObject(val1) && isObject(val2);
+      if (
+         areObjects && !deepEqual(val1, val2) ||
+         !areObjects && val1 !== val2
+      ) {
+         return false;
+      }
+   }
+   return true;
+}
+
+function sdcard_test() {
+   let sd = new SDCard();
+   console.assert( deepEqual( sd.split_path("root/myfolder/pluto"), { path: "root/myfolder", fileName: "pluto" }));
+   console.assert( deepEqual( sd.split_path("myfolder/pluto"), { path: "myfolder", fileName: "pluto" }));
+   console.assert( deepEqual( sd.split_path("/myfolder/pluto"), { path: "/myfolder", fileName: "pluto" }));
+   console.assert( deepEqual( sd.split_path("pluto"), { path: "", fileName: "pluto" }));
+   console.assert( deepEqual( sd.split_path("/pluto"), { path: "/", fileName: "pluto" }));
+   console.assert( deepEqual( sd.split_path("/"), { path: "/", fileName: "" }));
+   console.assert( deepEqual( sd.split_path(""), { path: "", fileName: "" }));
+
+}

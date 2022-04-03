@@ -246,27 +246,29 @@ class Nano {
             if(file_ok) {
                if(this.sdcard.isDirectory(filename)) {
                   this.send_buffer.push(ERR_RESPONSE);
-                  this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
-                  this.state = "send";
-                  this.state_after_send = "idle";
+                  this.send_buffer.push(...stringToArray("?NOT A FILE\0"));
                }
                else {
                   let file = this.sdcard.readFile(filename);
-                  this.debug("file read ok");
-                  this.send_buffer.push(0); // OK_RESPONSE
-                  this.send_buffer.push((file.length>>0) & 0xFF); // file size low byte
-                  this.send_buffer.push((file.length>>8) & 0xFF); // file size high byte
-                  this.send_buffer.push(...file); // file data
-                  this.state = "send";
-                  this.state_after_send = "idle";
+                  if(file !== undefined) {
+                     this.debug("file read ok");
+                     this.send_buffer.push(0); // OK_RESPONSE
+                     this.send_buffer.push((file.length>>0) & 0xFF); // file size low byte
+                     this.send_buffer.push((file.length>>8) & 0xFF); // file size high byte
+                     this.send_buffer.push(...file); // file data
+                  }
+                  else {
+                     this.send_buffer.push(ERR_RESPONSE);
+                     this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
+                  }
                }
             }
             else {
                this.send_buffer.push(ERR_RESPONSE);
                this.send_buffer.push(...stringToArray("?FILE NOT FOUND\0"));
-               this.state = "send";
-               this.state_after_send = "idle";
             }
+            this.state = "send";
+            this.state_after_send = "idle";
          }
       }
       else if(this.state == "write.filename") {         
@@ -302,10 +304,9 @@ class Nano {
       }
       else if(this.state == "write.filedata") {
          if(this.receive_buffer.length == this.bytesleft) {
-            let file_ok = true;
+            this.debug(`file data received`);
+            let file_ok = this.sdcard.writeFile(this.filename, this.receive_buffer);
             if(file_ok) {
-               this.debug(`file data received`);
-               this.sdcard.writeFile(this.filename, this.receive_buffer);
                this.receive_buffer = [];
                this.send_buffer.push(OK_RESPONSE);
                this.state = "send";
@@ -327,6 +328,7 @@ class Nano {
             this.debug(`LOAD filename received: "${filename}"`);
 
             let { list, match } = this.sdcard.matchname(filename);
+            console.log({ list, match });
 
             // sends as many WAITs as file entries
             list.forEach(e=>this.send_buffer.push(WAIT_RESPONSE));
@@ -338,29 +340,31 @@ class Nano {
             if(file_ok) {
                if(this.sdcard.isDirectory(filename)) {
                   this.send_buffer.push(ERR_RESPONSE);
-                  this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
-                  this.state = "send";
-                  this.state_after_send = "idle";
+                  this.send_buffer.push(...stringToArray("?NOT A FILE\0"));
                }
                else {
                   let file = this.sdcard.readFile(filename);
-                  this.debug("file read ok");
-                  this.send_buffer.push(0); // OK_RESPONSE
-                  this.send_buffer.push(...stringToArray(filename));
-                  this.send_buffer.push(0);
-                  this.send_buffer.push((file.length>>0) & 0xFF); // file size low byte
-                  this.send_buffer.push((file.length>>8) & 0xFF); // file size high byte
-                  this.send_buffer.push(...file); // file data
-                  this.state = "send";
-                  this.state_after_send = "idle";
+                  if(file !== undefined) {
+                     this.debug("file read ok");
+                     this.send_buffer.push(0); // OK_RESPONSE
+                     this.send_buffer.push(...stringToArray(filename));
+                     this.send_buffer.push(0);
+                     this.send_buffer.push((file.length>>0) & 0xFF); // file size low byte
+                     this.send_buffer.push((file.length>>8) & 0xFF); // file size high byte
+                     this.send_buffer.push(...file); // file data
+                  }
+                  else {
+                     this.send_buffer.push(ERR_RESPONSE);
+                     this.send_buffer.push(...stringToArray("?CAN'T OPEN FILE\0"));
+                  }
                }
             }
             else {
                this.send_buffer.push(ERR_RESPONSE);
                this.send_buffer.push(...stringToArray("?FILE NOT FOUND\0"));
-               this.state = "send";
-               this.state_after_send = "idle";
             }
+            this.state = "send";
+            this.state_after_send = "idle";
          }
       }
       else if(this.state == "dir.filename") {
