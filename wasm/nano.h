@@ -43,7 +43,7 @@ bool nano_wait_cpu_strobe(nano_t *nano, int value) {
 }
 
 #define NANO_CLK_DIV     32
-#define NANO_TIMEOUT_MAX (1000000/NANO_CLK_DIV)
+#define NANO_TIMEOUT_MAX (4000000/NANO_CLK_DIV)
 
 void nano_tick(nano_t *nano) {
 
