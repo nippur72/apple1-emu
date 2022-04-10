@@ -27,49 +27,64 @@ WRITE FILETOPO2 FF00 FFFF
 `)
 */
 
-
-const hello_world = new Uint8Array([
-   0x20, 0x87, 0x02, 0x20, 0xA6, 0x02, 0x60, 0xA9, 0xAF, 0x85, 0x02, 0xA9, 0x02, 0x85, 0x03, 0xA0,
-   0x00, 0xB1, 0x02, 0xE6, 0x02, 0xD0, 0x02, 0xE6, 0x03, 0xC9, 0x00, 0xD0, 0x01, 0x60, 0x85, 0x04,
-   0x20, 0xA9, 0x02, 0x4C, 0x8F, 0x02, 0x4C, 0x1F, 0xFF, 0xA5, 0x04, 0x20, 0xEF, 0xFF, 0x60, 0x0D,
-   0x0D, 0x48, 0x45, 0x4C, 0x4C, 0x4F, 0x20, 0x57, 0x4F, 0x52, 0x4C, 0x44, 0x20, 0x46, 0x52, 0x4F,
-   0x4D, 0x20, 0x4B, 0x49, 0x43, 0x4B, 0x2D, 0x43, 0x0D, 0x0D, 0x00
-]);
-
-function rset(s, len) {
-   return " ".repeat(len - s.length) + s;
+function rset(s, len, ch) {
+   s = String(s)
+   if(ch==undefined) ch = " ";
+   return ch.repeat(len - s.length) + s;
 }
 
-function lset(s, len) {
-   return (s + " ".repeat(15)).substring(0, len);
+function lset(s, len, ch) {
+   s = String(s);
+   if(ch==undefined) ch = " ";
+   return (s + ch.repeat(15)).substring(0, len);
+}
+
+function default_card() {
+   const hello_world = new Uint8Array([
+      0x20, 0x87, 0x02, 0x20, 0xA6, 0x02, 0x60, 0xA9, 0xAF, 0x85, 0x02, 0xA9, 0x02, 0x85, 0x03, 0xA0,
+      0x00, 0xB1, 0x02, 0xE6, 0x02, 0xD0, 0x02, 0xE6, 0x03, 0xC9, 0x00, 0xD0, 0x01, 0x60, 0x85, 0x04,
+      0x20, 0xA9, 0x02, 0x4C, 0x8F, 0x02, 0x4C, 0x1F, 0xFF, 0xA5, 0x04, 0x20, 0xEF, 0xFF, 0x60, 0x0D,
+      0x0D, 0x48, 0x45, 0x4C, 0x4C, 0x4F, 0x20, 0x57, 0x4F, 0x52, 0x4C, 0x44, 0x20, 0x46, 0x52, 0x4F,
+      0x4D, 0x20, 0x4B, 0x49, 0x43, 0x4B, 0x2D, 0x43, 0x0D, 0x0D, 0x00
+   ]);
+
+   // long file names test
+   let long_dir = {};
+   for(let t=50;t<255;t++) {
+      let fn = `FILE-000-${'A'.repeat(t)}#060280`;
+      fn = fn.replace("000", rset(fn.length,3,"0"));
+      long_dir[fn] = new Uint8Array([ 0x80, 0x81, 0x82, 0x83 ]);
+   }
+
+   let card = {
+      "ASOFT": {},
+      "EMPTYDIR": {},
+      "LONGDIR": long_dir,
+      "HELP": {
+         "COMMANDS.TXT": stringToUint8Array("*** HELP OF COMMANDS ***\rBLA BLA ...\r"),
+         "DIR.TXT":      stringToUint8Array("HELP FILE OF DIR\r"),
+         "LOAD.TXT":     stringToUint8Array("HELP FILE OF LOAD\r"),
+      },
+      "BIG":      stringToUint8Array("*-JUNK-*".repeat(2048)),
+      "HELLO":    hello_world,
+      "TEST.TXT": stringToUint8Array("THIS IS A TEST\r"),
+      "JUNK": {
+         "JUNK1": stringToUint8Array("*** JUNK FILE 1\r"),
+         "JUNK2": stringToUint8Array("*** JUNK FILE 2\r"),
+         "JUNKDIR": {
+            "TEST.TXT": stringToUint8Array("THIS IS A TEST OF A FILE WITHIN A DIR\r"),
+            "EMPTYDIR": {},
+         },
+      },
+   };
+
+   return {};
 }
 
 class SDCard {
    constructor() {
 
-      this.root = {
-         "ASOFT": {},
-         "EMPTYDIR": {},
-         "LONGDIR": {
-            "12345678901234567890123456789012#061000": stringToUint8Array("THIS IS A LONG FILE NAME\r"),
-         },
-         "HELP": {
-            "COMMANDS.TXT": stringToUint8Array("*** HELP OF COMMANDS ***\rBLA BLA ...\r"),
-            "DIR.TXT":      stringToUint8Array("HELP FILE OF DIR\r"),
-            "LOAD.TXT":     stringToUint8Array("HELP FILE OF LOAD\r"),
-         },
-         "BIG":      stringToUint8Array("*-JUNK-*".repeat(2048)),
-         "HELLO":    hello_world,
-         "TEST.TXT": stringToUint8Array("THIS IS A TEST\r"),
-         "JUNK": {
-            "JUNK1": stringToUint8Array("*** JUNK FILE 1\r"),
-            "JUNK2": stringToUint8Array("*** JUNK FILE 2\r"),
-            "JUNKDIR": {
-               "TEST.TXT": stringToUint8Array("THIS IS A TEST OF A FILE WITHIN A DIR\r"),
-               "EMPTYDIR": {},
-            },
-         },
-      };
+      this.root = default_card();
 
       this.files = this.root;
 
@@ -78,6 +93,7 @@ class SDCard {
    }
 
    async initcard() {
+      /*
       // E000 cold start, E2B3 warm start, EFEC run, CALL -151 or reset to exit
       this.files["BASIC#06E000"]    = await fetchBytes("sdcard_image/BASIC.bin");
       this.files["STARTREK#F10300"] = await fetchBytes("sdcard_image/STARTREK.bin");
@@ -85,6 +101,33 @@ class SDCard {
       this.files["ASOFT"]["APPLESOFT-SD#066000"] = await fetchBytes("sdcard_image/ASOFT/applesoft-lite-sdcard.bin");
       this.files["ASOFT"]["LEMO#F80801"] = await fetchBytes("sdcard_image/ASOFT/LEMO.bin");
       this.files["ASOFT"]["HELLO#F80801"] = await fetchBytes("sdcard_image/ASOFT/HELLO.bin");
+      */
+
+      let bytes = await fetchBytes("sdcard_image.zip");
+      let zip = new JSZip();
+      await zip.loadAsync(bytes);
+
+      let files = Object.keys(zip.files);
+
+      // create directories
+      files.forEach(name => {
+         let entry = zip.files[name];
+         if(entry.dir) {
+            name = name.substring(0,name.length-1);
+            this.mkdir(name);
+         }
+      });
+
+      // create files
+      for(let t=0; t<files.length; t++) {
+         let name = files[t];
+         let entry = zip.files[name];
+         if(!entry.dir) {
+            let bytes = await zip.file(name).async("uint8array");
+            name = name.toUpperCase();
+            this.writeFile(name, bytes);
+         }
+      }
    }
 
    // splits filename into { path, fileName } as in .ino
@@ -287,12 +330,36 @@ class SDCard {
 /*
 https://github.com/txgx42/applesoft-lite
 (function() {
-   let VARTAB = hex(mem_read_word(0x0069),4);
-   let TXTTAB = hex(mem_read_word(0x0067),4);
-   let PRGEND = hex(mem_read_word(0x00AF),4);
-   let MEMSIZ = hex(mem_read_word(0x0073),4);
-   console.log({VARTAB, TXTTAB, PRGEND, MEMSIZ})
+   let VARTAB  = hex(mem_read_word(0x0069),4);
+   let TXTTAB  = hex(mem_read_word(0x0067),4);
+   let PRGEND  = hex(mem_read_word(0x00AF),4);
+   let MEMSIZ  = hex(mem_read_word(0x0073),4);
+   let TIMEOUT = hex(mem_read(0x0003),2);
+   let TIMEOUT_MAX = hex(mem_read_word(0x0004),4);
+   let TIMEOUT_CNT = hex(mem_read_word(0x0006),4);
+   let TIMEOUT_RANGE = hex(mem_read_word(0x0014),4);
+
+   console.log({VARTAB, TXTTAB, PRGEND, MEMSIZ});
+   console.log({TIMEOUT, TIMEOUT_MAX, TIMEOUT_CNT, TIMEOUT_RANGE});
 })();
+
+function xx(p) {
+   function getb() {
+      let rom = [];
+      for(let t=0x0;t<0xffff;t++) rom.push(mem_read(t));
+      return rom;
+   }
+   if(p==1) this.z1 = getb();
+   if(p==2) this.z2 = getb();
+   if(p==3) {
+      let z1 = this.z1;
+      let z2 = this.z2;
+      for(let t=0;t<z1.length;t++) if(z1[t]!=z2[t]) console.log(`${hex(t,4)}: ${hex(z1[t],2)} ${hex(z2[t],2)}`);
+   }
+   if(p==4) {
+      for(let t=0;t<z1.length;t++) if(z1[t]!=z2[t]) mem_write(t,z1[t]);
+   }
+}
 */
 
 // =====================================================================================
