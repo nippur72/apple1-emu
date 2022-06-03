@@ -277,6 +277,15 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
       }
    }
 
+   /*
+   if(addr >= 0x6000 && addr <= 0x8000 && !(addr >= 0xA000 && addr <=0xA0FF) && !(addr >= 0xd010 && addr <= 0xd013)) {
+      if(!read) {
+         byte data = M6502_GET_DATA(pins);
+         byte unused = (byte) EM_ASM_INT({ console.log(hex($0,4),hex($1)); }, addr, data );
+      }
+   }
+   */
+
    // ticks the VIA
    {
       //if(last_mcu_strobe != sys->nano.mcu_strobe) {
