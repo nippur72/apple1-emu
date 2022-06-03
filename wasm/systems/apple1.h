@@ -67,7 +67,7 @@ typedef struct {
    float* sample_buffer;
 
    uint8_t ram[65536];
-   uint8_t woz_rom[1024];
+   uint8_t woz_rom[4096];
 
    uint32_t ticks;             // CPU tick counter
    int blink_counter;          // hardware cursor blink counter
@@ -132,14 +132,31 @@ void apple1_init(apple1_t* sys, const apple1_desc_t* desc) {
 
    // maps Woz monitor ROM
    //CHIPS_ASSERT(desc->rom_kernal && (desc->rom_kernal_size == sizeof(sys->rom_kernal)));
-   memcpy(&sys->woz_rom[1024-sizeof(woz_mon)], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0000], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0100], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0200], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0300], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0400], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0500], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0600], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0700], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0800], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0900], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0A00], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0B00], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0C00], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0D00], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0E00], woz_mon, sizeof(woz_mon));
+   memcpy(&sys->woz_rom[0x0F00], woz_mon, sizeof(woz_mon));   
 
    mem_init(&sys->mem_cpu);
 
    mem_map_ram(&sys->mem_cpu, 0, 0x0000, 0x8000-0x0000, &sys->ram[0x0000]);  // 0000-7FFF RAM
    mem_map_rom(&sys->mem_cpu, 0, 0x8000, 0xE000-0x8000, &sys->ram[0x8000]);  // 8000-DFFF ROM
    mem_map_ram(&sys->mem_cpu, 0, 0xE000, 0xFC00-0xE000, &sys->ram[0xE000]);  // E000-FBFF RAM
-   mem_map_rom(&sys->mem_cpu, 0, 0xFC00,          1024, sys->woz_rom);       // FC00-FFFF ROM woz
+   mem_map_rom(&sys->mem_cpu, 0, 0xF000,          4096, sys->woz_rom);       // F000-FFFF ROM woz
+
+   // TODO replica-1 memory layout
 
    // initialize ram
    for(int t=0;t<=0xFFFF;t++) {
