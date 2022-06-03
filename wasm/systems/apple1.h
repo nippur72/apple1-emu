@@ -342,10 +342,10 @@ bool apple1_load_prg(apple1_t* sys, const uint8_t* ptr, int num_bytes) {
    if (num_bytes < 2) {
       return false;
    }
-   const uint16_t start_addr = ptr[1]<<8 | ptr[0];
+   const int start_addr = ptr[1]<<8 | ptr[0];
    ptr += 2;
-   const uint16_t end_addr = start_addr + (num_bytes - 2);
-   uint16_t addr = start_addr;
+   const int end_addr = start_addr + (num_bytes - 2);
+   int addr = start_addr;
    while (addr < end_addr) {
       //mem_wr(&sys->mem_cpu, addr++, *ptr++);
       sys->ram[addr++] = *ptr++;  // writes also in rom
