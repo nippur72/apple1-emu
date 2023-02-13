@@ -11,6 +11,11 @@
 
 #include "../chips/m6522.h"
 
+/*
+#include "buzzer.h"
+#include "tape.h"
+*/
+
 #ifdef TMS9928
 #include "../tms9928.h"
 extern tms9928_t vdp;
@@ -72,6 +77,12 @@ typedef struct {
    uint32_t ticks;             // CPU tick counter
    int blink_counter;          // hardware cursor blink counter
    bool display_ready;         // display ready bit
+
+   //tape_t tape;                // tape WAV adapter
+   // buzzer audio
+   float *audio_buf;
+   int audio_buf_size;
+   //buzzer_t buzzer;
 
    m6522_t via;                // 6522 VIA chip for SD card interface emulation
 
@@ -163,6 +174,17 @@ void apple1_init(apple1_t* sys, const apple1_desc_t* desc) {
       sys->ram[t] = ((t%4) == 0 || (t%4) == 1) ? 0x00 : 0xFF;
    }
 
+   /*
+   // buzzer
+   buzzer_desc_t buzdesc;
+   buzdesc.audio_buf = desc->audio_buf;
+   buzdesc.audio_buf_size = desc->audio_buf_size;
+   buzdesc.cpu_clock = sys->cpu_clock;
+   buzdesc.sample_rate = desc->sample_rate;
+   buzdesc.buffer_ready_cb = desc->buffer_ready_cb;
+   buzzer_init(&sys->buzzer, &buzdesc);
+   */
+
    // initialize the VIA
    m6522_init(&sys->via);
 }
@@ -176,6 +198,8 @@ void apple1_reset(apple1_t* sys) {
    CHIPS_ASSERT(sys && sys->valid);
    sys->pins |= M6502_RES;
    sys->ticks = 0;
+   //tape_reset(&sys->tape);
+
    // TODO reset TMS9928 as well
    #ifdef TMS9928
    tms9928_reset(&vdp);
@@ -250,7 +274,7 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
          if(addr == 0xd012 && sys->display_ready) {
             byte data = M6502_GET_DATA(pins);
             byte unused = (byte) EM_ASM_INT({ display_receivechar($0) }, data);
-            sys->display_ready = false;
+            sys->display_ready = false; // true for fast display            
             sys->blink_counter = 400000;   // reset cursor blinking some steps before "on" state
          }
       }
@@ -339,6 +363,22 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
    
    // ticks the nano
    nano_tick(&sys->nano);
+
+   /*
+   // ticks the tape
+   {
+      float sample_cassette_out = (sys->cassette_out + sys->cassette_out_MSB) / 2.0 - 0.5;
+      float sample_buzzer       = (((float) sys->speaker_A) - ((float)sys->speaker_B)) / 2.0;
+
+      sys->tape.save.sample = sample_buzzer + sample_cassette_out + 0.5;
+      tape_load_tick(&sys->tape, ticks);
+      sys->cassette_in = sys->tape.load.sample < 0 ? 1 : 0;
+
+      float sample_cassette_in = sys->cassette_in - 0.5;
+      float sample = sample_cassette_in + sample_cassette_out + sample_buzzer;
+      buzzer_ticks(&sys->buzzer, ticks, sample);
+   }
+   */
 
    return pins;
 }
