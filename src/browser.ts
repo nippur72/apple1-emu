@@ -1,4 +1,7 @@
+import { hex } from "./bytes";
+import { apple1 } from "./emscripten_wrapper";
 import { loadBytes } from "./filesystem";
+import { paste } from "./paste";
 
 // handles interaction between browser and emulation 
 
@@ -78,19 +81,27 @@ dropZone.addEventListener('drop', e => {
 
    for(let i=0, f: File; f=files[i]; i++) {                   
       const reader = new FileReader();      
-      reader.onload = e2 => droppedFile(f.name, new Uint8Array(e2.target!.result as any));
+      reader.onload = e2 => {
+         const target = e2.target;
+         if(target !== null && target) {
+            const result = target.result;
+            if(result instanceof ArrayBuffer) {
+               droppedFile(f.name, new Uint8Array(result));
+            }
+         }
+      };
       reader.readAsArrayBuffer(f); 
    }
 });
 
-async function droppedFile(outName: string, bytes: any) {
+async function droppedFile(outName: string, bytes: Uint8Array) {
    const prg = /\.prg$/i;
-   if(prg.test(outName)) {     
-      throw "not implemented";
-      /*
-      await writeFile(outName, bytes);
-      await crun(outName);
-      */
+   if(prg.test(outName)) { 
+      apple1.load_prg(bytes, bytes.length); 
+      console.log(`loaded dropped file '${outName}'`);
+      const address = bytes[0] + bytes[1] * 256;
+      paste(`${hex(address,4)}R\n`);
+      return;     
    }
 
    const woz = /\.woz$/i;

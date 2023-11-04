@@ -114,3 +114,8 @@ void sys_print_pc() {
    uint16_t pc = sys.cpu.PC;
    byte unused = (byte) EM_ASM_INT({ console.log(hex($0,4)); }, pc );
 }
+
+EMSCRIPTEN_KEEPALIVE
+void sys_iec_emulate(bool emulate) {
+   sys.iec.emulate = emulate;   
+}

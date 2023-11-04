@@ -1,4 +1,4 @@
-import { rset, lset, stringToUint8Array } from "./string_utils";
+import { rset, lset, stringToUint8Array } from "../string_utils";
 
 import { ISDCard } from "./sdcard";
 

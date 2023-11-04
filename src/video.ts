@@ -26,7 +26,7 @@ function calculateGeometry_apple1() {
    
    canvas.width  = SCREEN_W * 2;
    canvas.height = SCREEN_H * 2;
-
+   
    let screen = document.getElementById("screen_apple1") as HTMLCanvasElement;
    screen.style.display = visible_screen == "apple1" ? "block" : "none";
 }
@@ -58,7 +58,7 @@ export function apple1_screen_update(cursor_on: boolean) {
             let ch = display[row*40+col] & 63;
             let line = charset[ch*8 + y];
             for(let x=7;x>=0;x--) {
-               let pixel = line & (1 << x) ? 0xffffffff : 0xff000000 ;                  
+               let pixel = line & (1 << x) ? 0xffffffff : 0xff000000 ;                
                imagedata_data[ptr1++] = pixel;
                imagedata_data[ptr1++] = pixel;
                imagedata_data[ptr2++] = pixel;
@@ -71,26 +71,24 @@ export function apple1_screen_update(cursor_on: boolean) {
       }
    }
 
-   // artifacts   
-   /*   
-   ptr1 = 0;
-   ptr2 = SCREEN_W*2;
+   // artifacts      
+   ptr1 = 16+0;
+   ptr2 = 16+SCREEN_W*2;
    for(let row=0;row<24;row++) {      
-      for(let col=0;col<40;col++) {
+      for(let col=0;col<40;col+=2) {
                      
-         let pixel = 0xff222222;                  
+         let pixel = 0xff444444;                  
          imagedata_data[ptr1  ] = pixel;
          imagedata_data[ptr1+1] = pixel;
          imagedata_data[ptr2  ] = pixel;
          imagedata_data[ptr2+1] = pixel;                  
 
-         ptr1+=16;
-         ptr2+=16;
+         ptr1+=16*2;
+         ptr2+=16*2;
       }
       ptr1 += SCREEN_W*2*16 - 40*16;
       ptr2 += SCREEN_W*2*16 - 40*16;
    } 
-   */   
 
    // restore character under cursor
    display[cursor_y*40+cursor_x] = old_char;
@@ -98,5 +96,3 @@ export function apple1_screen_update(cursor_on: boolean) {
    // m6561_imagedata.data.set(imagedata_buf8);
    apple1_context.putImageData(apple1_imagedata, 0, 0);
 }
-
-

@@ -39,8 +39,7 @@ class Apple1Keyboard {
 
       if(e.code == "Pause") {
          if(e.altKey && e.ctrlKey) {
-            apple1.init();
-            apple1display.cls(); 
+            apple1.power();
          }
          apple1.reset();
          e.preventDefault();

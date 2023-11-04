@@ -3,14 +3,20 @@ import JSZip from "jszip";
 
 import { default_card } from "./defaultCard";
 import { fetchBytes } from "./fetchBytes";
-import { rset } from "./string_utils";
+import { rset } from "../string_utils";
 
 export interface ISDCard {
-   [key:string]: Uint8Array | ISDCard
+   [key:string]: Uint8Array | ISDCard | undefined;
 }
 
-function isFileEntry(b: Uint8Array | ISDCard): b is Uint8Array {
-   return (b as Uint8Array).length !== undefined;
+function isFileEntry(b: Uint8Array | ISDCard | undefined): b is Uint8Array {
+   if(b === undefined) return false;
+   return 'length' in b;
+}
+
+function isDirEntry(b: Uint8Array | ISDCard | undefined): b is ISDCard {
+   if(b === undefined) return false;
+   return !isFileEntry(b);
 }
 
 interface PrintableDirItem {
@@ -60,7 +66,7 @@ export class SDCard {
             name = name.toUpperCase();
             this.writeFile(name, bytes);
          }
-      }
+      }      
    }
 
    // splits filename into { path, fileName } as in .ino
@@ -87,10 +93,9 @@ export class SDCard {
       for(let t=0; t<names.length; t++) {
          let name = names[t];
          if(name != "") {
-            let newdir = cd[name];
-            if(newdir == undefined) return undefined;
-            if(newdir.length !== undefined) return undefined;  // it's a file            
-            cd = cd[name] as ISDCard;
+            let newdir = cd[name];            
+            if(!isDirEntry(newdir)) return undefined;
+            cd = newdir;
          }
       }
       return cd;
@@ -102,9 +107,8 @@ export class SDCard {
 
    isDirectory(fullpath: string) {
       let file = this.readFile(fullpath);
-      if(file === undefined) throw `${fullpath} not found`;
-      if(file.length === undefined) return true;
-      else return false;
+      if(file === undefined) false;
+      return isDirEntry(file);
    }
 
    getPrintableDir(fullpath: string) {
@@ -120,9 +124,9 @@ export class SDCard {
          let { path, fileName } = this.split_path(fullpath);
          let dir = this.getDir(path);
          if(dir === undefined) return undefined;
-         if(dir[fileName] == undefined) return undefined;
-         if(dir[fileName].length !== undefined) return undefined;
-         cd = dir[fileName] as ISDCard;
+         let entry = dir[fileName];
+         if(isDirEntry(entry)) cd = entry;
+         else return undefined;         
       }
 
       let entries = Object.keys(cd);
@@ -130,7 +134,8 @@ export class SDCard {
 
       // dirs first
       entries.forEach(e=>{
-         if(cd[e].length === undefined) {
+         let entry = cd[e];
+         if(isDirEntry(entry)) {
             result.push({
                size: "(DIR)",
                name: e,
@@ -142,8 +147,9 @@ export class SDCard {
       });
       // then files
       entries.forEach(e=>{
-         if(cd[e].length !== undefined) {
-            let size = cd[e].length.toString();
+         let entry = cd[e];
+         if(isFileEntry(entry)) {
+            let size = entry.length.toString();
             let s = (e+"#").split("#");
             let type = s[1].substring(0, 2);
             let address = s[1].substring(2);
@@ -193,7 +199,7 @@ export class SDCard {
       if(!isFileEntry(file)) return undefined;
       return file;
    }
-
+   
    writeFile(fullpath: string, data: Uint8Array) {
       let { path, fileName } = this.split_path(fullpath);
       let dir = this.getDir(path);
@@ -236,14 +242,14 @@ export class SDCard {
       let dir = this.getDir(path);
       if(dir === undefined) return false;
       let newdir = dir[fileName];
-      if(newdir == undefined || isFileEntry(newdir)) return false;      
+      if(!isDirEntry(newdir)) return false;      
       this.files = newdir;
       return true;
    }
 
    isDirEmpty(dirname: string) {
       let dir = this.getDir(dirname);
-      if(dir === undefined) return true;
+      if(dir === undefined) throw "directory not found";
       let subfiles = Object.keys(dir);
       return subfiles.length == 0;
    }
@@ -256,15 +262,16 @@ export class SDCard {
       }
 
       let file = this.readFile(match);
-      if(file !== undefined) {
-         let bytes = new Uint8Array(file);
-         let { fileName } = this.split_path(match);
-         let blob = new Blob([bytes], {type: "application/octet-stream"});
-         saveAs(blob, fileName);
-         console.log(`downloaded "${fileName}"`);
-      } else {
+      if(file === undefined) {
          console.log(`error reading file`);
+         return;
       }
+
+      let bytes = new Uint8Array(file);
+      let { fileName } = this.split_path(match);
+      let blob = new Blob([bytes], {type: "application/octet-stream"});
+      saveAs(blob, fileName);
+      console.log(`downloaded "${fileName}"`);
    }
 }
 

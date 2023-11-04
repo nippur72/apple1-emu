@@ -22,6 +22,7 @@ extern tms9928_t vdp;
 #endif
 
 #include "../nano.h"
+#include "../iec.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,9 +85,10 @@ typedef struct {
    int audio_buf_size;
    //buzzer_t buzzer;
 
+   bool sdcard_enabled;
    m6522_t via;                // 6522 VIA chip for SD card interface emulation
-
    nano_t nano;
+   iec_t iec;
 
 } apple1_t;
 
@@ -166,6 +168,7 @@ void apple1_init(apple1_t* sys, const apple1_desc_t* desc) {
    mem_map_rom(&sys->mem_cpu, 0, 0x8000, 0xE000-0x8000, &sys->ram[0x8000]);  // 8000-DFFF ROM
    mem_map_ram(&sys->mem_cpu, 0, 0xE000, 0xFC00-0xE000, &sys->ram[0xE000]);  // E000-FBFF RAM
    mem_map_rom(&sys->mem_cpu, 0, 0xF000,          4096, sys->woz_rom);       // F000-FFFF ROM woz
+   //mem_map_ram(&sys->mem_cpu, 0, 0xF000,          4096, sys->woz_rom);       // F000-FFFF ROM woz
 
    // TODO replica-1 memory layout
 
@@ -187,6 +190,7 @@ void apple1_init(apple1_t* sys, const apple1_desc_t* desc) {
 
    // initialize the VIA
    m6522_init(&sys->via);
+   iec_reset(&sys->iec);
 }
 
 void apple1_discard(apple1_t* sys) {
@@ -318,37 +322,30 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
       }
    }
 
-   /*
-   if(addr >= 0x6000 && addr <= 0x8000 && !(addr >= 0xA000 && addr <=0xA0FF) && !(addr >= 0xd010 && addr <= 0xd013)) {
-      if(!read) {
-         byte data = M6502_GET_DATA(pins);
-         byte unused = (byte) EM_ASM_INT({ console.log(hex($0,4),hex($1)); }, addr, data );
-      }
-   }
-   */
-
    // ticks the VIA
    {
-      //if(last_mcu_strobe != sys->nano.mcu_strobe) {
-      //   last_mcu_strobe = sys->nano.mcu_strobe;
-      //   byte unused = (byte) EM_ASM_INT({ console.log("mcu strobe to ", $0); }, sys->nano.mcu_strobe );
-      //}
-
-      // connects the nano output to the VIA input
+      // connects the nano output to the VIA input // TOD should check DDR ?
       M6522_SET_PA(via_pins, sys->nano.data_out);
-      M6522_SET_PB(via_pins, sys->nano.mcu_strobe ? 0xFF : 0x00);
+      M6522_SET_PB(via_pins, 
+         (sys->nano.mcu_strobe << 7) |
+         (sys->iec.DIN         << 6) |
+         (sys->iec.CLKIN       << 5) 
+      );
 
       via_pins = m6522_tick(&sys->via, via_pins);
 
-      // set VIA output to the nano input
+      // set VIA output to the nano input and IEC bus // TOD should check DDR ?
       sys->nano.data_in = M6522_GET_PA(via_pins);
-      sys->nano.cpu_strobe = M6522_GET_PB(via_pins) & 0x01;
-      
-      //if(last_cpu_strobe != sys->nano.cpu_strobe) {
-      //   last_cpu_strobe = sys->nano.cpu_strobe;
-      //   byte unused = (byte) EM_ASM_INT({ console.log("cpu strobe to ", $0); }, sys->nano.cpu_strobe );
-      //}
-                     
+      sys->nano.cpu_strobe = M6522_GET_PB(via_pins) & 1;      
+      sys->iec.ATNOUT = ((~M6522_GET_PB(via_pins))>>2) & 1;
+      sys->iec.CLKOUT = ((~M6522_GET_PB(via_pins))>>3) & 1;
+      sys->iec.DOUT   = ((~M6522_GET_PB(via_pins))>>4) & 1;
+
+      // for debug only
+      sys->iec.inpr = sys->via.pb.inpr;
+      sys->iec.outr = sys->via.pb.outr;
+      sys->iec.ddr  = sys->via.pb.ddr;
+                           
       // reads back data from VIA
       if((via_pins & (M6522_CS1|M6522_RW)) == (M6522_CS1|M6522_RW)) {
          pins = M6502_COPY_DATA(pins, via_pins);
@@ -363,6 +360,7 @@ static uint64_t _apple1_tick(apple1_t* sys, uint64_t pins) {
    
    // ticks the nano
    nano_tick(&sys->nano);
+   iec_tick(&sys->iec);
 
    /*
    // ticks the tape

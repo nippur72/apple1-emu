@@ -3,20 +3,26 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
       <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0' name='viewport' />					
    </head>
+
+   <style>
+      @font-face {
+         font-family: "apple2";
+         src: url('./dist/PRNumber3.ttf');
+      }
+   </style>
    
+   <body style="padding:0; margin:0; background: black; color: green;">
 
-<body style="padding:0; margin:0; background: black; color: green;">
+      <div style="margin: auto;" id="screen_apple1">
+         <canvas id="canvas_apple1" style="display: block; border:black 0px solid; padding: 0px; margin:auto;"></canvas>
+      </div>
 
-   <div style="margin: auto;" id="screen_apple1">
-      <canvas id="canvas_apple1" style="display: block; border:black 0px solid; padding: 0px; margin:auto;"></canvas>
-   </div>
+      <div style="margin: auto" id="screen_tms9928">
+         <canvas id="canvas_tms9928" style="display: block; border:black 0px solid; padding: 0px; margin:auto; ">aaa</canvas>
+      </div>
 
-   <div style="margin: auto" id="screen_tms9928">
-      <canvas id="canvas_tms9928" style="display: block; border:black 0px solid; padding: 0px; margin:auto; ">aaa</canvas>
-   </div>
+      <div id="mountnode"></div>
+      <script src="dist/bundle.js"></script>
+   </body>
 
-   <div id="mountnode"></div>
-   <script src="dist/bundle.js"></script>
-
-</body>
 </html>

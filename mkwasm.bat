@@ -4,6 +4,7 @@ rem abilitare il path con
 rem ..\emsdk\emsdk_env.bat
 rem see also: https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
 
+rem call emcc wasm\sys.c -O1 ^
 call emcc wasm\sys.c -O3 ^
    -s EXPORTED_RUNTIME_METHODS=ccall,cwrap ^
    -s ENVIRONMENT=web ^

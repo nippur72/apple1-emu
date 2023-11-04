@@ -35,7 +35,7 @@
 */
 
 import { SDCard } from "./sdcard";
-import { stringToArray, arrayToString, lset } from "./string_utils";
+import { stringToArray, arrayToString, lset } from "../string_utils";
 import { apple1 } from "../emscripten_wrapper";
 
 type byte = number;
@@ -115,7 +115,7 @@ class Nano {
    }
 
    debug(m: string) {
-      console.log(`nano: ${m}`);
+      // console.log(`nano: ${m}`);
    }
 
    // event called by WASM when a byte is received
@@ -604,7 +604,7 @@ class Nano {
    }   
 }
 
-let nano = new Nano();
+export let nano = new Nano();
 
 export function nano_byte_received(data: byte) { 
    return nano.byte_received(data); 

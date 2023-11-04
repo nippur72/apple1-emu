@@ -37,6 +37,11 @@ class Display {
       this.cls();
    }
 
+   bootscreen() {
+      for(let t=0;t<this.display.length;t+=2) this.display[t] = 31;
+      for(let t=1;t<this.display.length;t+=2) this.display[t] = 0;      
+   }
+
    cls() {
       this.display = new Uint8Array(40*24).fill(32);
       this.cursor_x = 0;
