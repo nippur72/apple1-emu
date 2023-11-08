@@ -375,12 +375,12 @@ class Nano {
                this.state_after_send = "idle";
             }
             else {
-               let dir_formatted;
+               let dir_formatted: string[];
 
-               if(this.cmd==CMD_LS) dir_formatted = entries.map(e=>`${e.size} ${e.name}`);
-               else                 dir_formatted = entries.map(e=>`${lset(e.shortname,15)} ${e.size} ${e.type} ${e.address}`);
+               if(this.cmd==CMD_LS) dir_formatted = entries.map(e=>e.name === "" ? '\0' : `${e.size} ${e.name}\r`);
+               else                 dir_formatted = entries.map(e=>e.name === "" ? '\0' : `${lset(e.shortname,15)} ${e.size} ${e.type} ${e.address}\r`);
 
-               this.dir_formatted = dir_formatted;
+               this.dir_formatted = dir_formatted;   
 
                this.send_buffer.push(OK_RESPONSE);
                this.state = "send";
@@ -408,8 +408,7 @@ class Nano {
             }
             else {
                this.send_buffer.push(OK_RESPONSE);  // yes there's a line coming
-               this.send_string(line);
-               this.send_buffer.push(13);  // line terminator                
+               this.send_string(line);                                              
                this.state = "send";
                this.state_after_send = "dir.nextline";
             }
